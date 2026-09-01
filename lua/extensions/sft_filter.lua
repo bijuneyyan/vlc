@@ -586,26 +586,24 @@ function activate()
     w_category_dropdown:add_value("Profanity", 4)
     w_category_dropdown:add_value("Other", 5)
 
-    -- Row 5: Description Input (Col 1 = Label, Col 2..5 = Input)
+    -- Row 5: Description Input & + Add Filter Button
     dialog:add_label("<b>Description:</b>", 1, 5, 1, 1)
-    w_desc = dialog:add_text_input("Filter description", 2, 5, 4, 1)
+    w_desc = dialog:add_text_input("Filter description", 2, 5, 2, 1)
+    dialog:add_button("+ Add Filter", click_add_filter, 4, 5, 2, 1)
 
-    -- Row 6: Prominent Full-Width + Add Filter Button
-    dialog:add_button("+ Add Filter Segment", click_add_filter, 1, 6, 5, 1)
+    -- Row 6: Active Filter Segments Header
+    dialog:add_label("<b>Active Filter Segments:</b>", 1, 6, 5, 1)
 
-    -- Row 7: Active Filter Segments Header
-    dialog:add_label("<b>Active Filter Segments:</b>", 1, 7, 5, 1)
+    -- Row 7: Filter List Text Box (Multi-line scrollable box, span 2 rows)
+    w_filter_list = dialog:add_text_input("(No filter segments added yet)", 1, 7, 5, 2)
 
-    -- Row 8: Filter List Text Box (Multi-line scrollable box, span 2 rows)
-    w_filter_list = dialog:add_text_input("(No filter segments added yet)", 1, 8, 5, 2)
+    -- Row 9: Export & Control Buttons
+    dialog:add_button("Export .sft", click_export_sft, 1, 9, 1, 1)
+    dialog:add_button("Clear All", click_clear_filters, 2, 9, 1, 1)
+    dialog:add_button("Toggle Filtering", toggle_filtering_state, 3, 9, 3, 1)
 
-    -- Row 10: Export & Control Buttons
-    dialog:add_button("Export .sft", click_export_sft, 1, 10, 1, 1)
-    dialog:add_button("Clear All", click_clear_filters, 2, 10, 1, 1)
-    dialog:add_button("Toggle Filtering", toggle_filtering_state, 3, 10, 3, 1)
-
-    -- Row 11: Status Bar
-    w_status = dialog:add_label("Ready. Play video and click 'Set IN' / 'Set OUT'.", 1, 11, 5, 1)
+    -- Row 10: Status Bar
+    w_status = dialog:add_label("Ready. Play video and click 'Set IN' / 'Set OUT'.", 1, 10, 5, 1)
 
     update_filter_list_display()
     dialog:show()
