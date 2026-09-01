@@ -598,4 +598,3 @@ function update()
         end
     end
 end
-end
