@@ -14,7 +14,7 @@ function descriptor()
         url = "https://github.com/user/vlc-sft",
         shortdesc = "Safety Filter (.sft) Player & Marker Editor",
         description = "Automatically skip or mute sensitive video portions using .sft filter files, or mark in-out points to generate .sft files.",
-        capabilities = {"input-listener", "menu"}
+        capabilities = {"input-listener", "playing-listener", "menu"}
     }
 end
 
@@ -353,6 +353,7 @@ end
 -- Core Filtering Runtime Loop (Triggered periodically or on events)
 -------------------------------------------------------------------------------
 local function process_active_filters()
+    if vlc.keep_alive then vlc.keep_alive() end
     if not filtering_enabled or not sft_data or not sft_data.filters then return end
     
     local now_sec = get_current_time_sec()
@@ -597,4 +598,9 @@ function update()
             dialog:update()
         end
     end
+end
+
+function status_changed()
+    if vlc.keep_alive then vlc.keep_alive() end
+    process_active_filters()
 end
