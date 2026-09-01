@@ -242,15 +242,21 @@ local function get_current_time_sec()
     local input = vlc.object.input()
     if not input then return 0 end
 
-    local time_us = vlc.var.get(input, "time")
-    if time_us and type(time_us) == "number" and time_us > 0 then
-        return time_us / 1000000.0
+    local raw_time = vlc.var.get(input, "time")
+    local raw_len = vlc.var.get(input, "length")
+
+    if raw_time and type(raw_time) == "number" and raw_time > 0 then
+        if raw_time > 10000 then
+            return raw_time / 1000000.0
+        else
+            return raw_time
+        end
     end
 
     local pos = vlc.var.get(input, "position")
-    local length_us = vlc.var.get(input, "length")
-    if pos and length_us and type(pos) == "number" and type(length_us) == "number" and length_us > 0 then
-        return (pos * length_us) / 1000000.0
+    if pos and raw_len and type(pos) == "number" and type(raw_len) == "number" and raw_len > 0 then
+        local len_sec = (raw_len > 10000) and (raw_len / 1000000.0) or raw_len
+        return pos * len_sec
     end
 
     return 0
@@ -259,7 +265,20 @@ end
 local function seek_to_sec(target_sec)
     local input = vlc.object.input()
     if not input then return end
-    vlc.var.set(input, "time", math.floor(target_sec * 1000000))
+
+    local raw_len = vlc.var.get(input, "length") or 0
+    if raw_len > 10000 then
+        vlc.var.set(input, "time", math.floor(target_sec * 1000000))
+    else
+        vlc.var.set(input, "time", target_sec)
+    end
+
+    if raw_len > 0 then
+        local total_sec = (raw_len > 10000) and (raw_len / 1000000.0) or raw_len
+        if total_sec > 0 then
+            vlc.var.set(input, "position", target_sec / total_sec)
+        end
+    end
 end
 
 local function format_time(seconds)
@@ -276,22 +295,23 @@ end
 
 local function update_filter_list_display()
     if not w_filter_list then return end
-    local display_text = ""
+    local display_html = ""
     for i, filter in ipairs(sft_data.filters) do
-        display_text = display_text .. string.format(
-            "[%d] %s -> %s | Action: %s | Cat: %s | %s\n",
+        local action_badge = (filter.action == "skip") and "⏩ SKIP" or "🔇 MUTE"
+        display_html = display_html .. string.format(
+            "<b>#%d</b> | <b>%s</b> | %s ➔ %s | Cat: <i>%s</i> %s<br/>",
             i,
+            action_badge,
             format_time(filter.start_time),
             format_time(filter.end_time),
-            filter.action:upper(),
-            filter.category,
-            filter.description or ""
+            filter.category:upper(),
+            (filter.description and filter.description ~= "") and ("(" .. filter.description .. ")") or ""
         )
     end
-    if display_text == "" then
-        display_text = "(No filter segments added yet)"
+    if display_html == "" then
+        display_html = "(No filter segments added yet)"
     end
-    w_filter_list:set_text(display_text)
+    w_filter_list:set_text(display_html)
 end
 
 -------------------------------------------------------------------------------
@@ -362,12 +382,13 @@ local function process_active_filters()
     local inside_mute_zone = false
 
     for _, filter in ipairs(sft_data.filters) do
-        if now_sec >= filter.start_time and now_sec < filter.end_time then
+        if now_sec >= filter.start_time and now_sec < (filter.end_time - 0.05) then
             if filter.action == "skip" then
-                -- Skip ahead to end_time (+ 0.1s buffer to avoid re-trigger loop)
+                -- Perform dual seek (time & position)
                 seek_to_sec(filter.end_time + 0.1)
                 if w_status then
-                    w_status:set_text("Skipped: " .. (filter.description or filter.category))
+                    w_status:set_text("⏩ Skipped " .. filter.category:upper() .. ": " .. format_time(filter.start_time) .. " ➔ " .. format_time(filter.end_time))
+                    if dialog then dialog:update() end
                 end
                 return
             elseif filter.action == "mute" then
@@ -380,17 +401,37 @@ local function process_active_filters()
     if inside_mute_zone and not muted_by_sft then
         vlc.volume.mute()
         muted_by_sft = true
-        if w_status then w_status:set_text("Muted: Sensitive audio") end
+        if w_status then
+            w_status:set_text("🔇 Muted Audio (Sensitive Scene)")
+            if dialog then dialog:update() end
+        end
     elseif not inside_mute_zone and muted_by_sft then
         vlc.volume.mute() -- toggle unmute
         muted_by_sft = false
-        if w_status then w_status:set_text("Unmuted audio") end
+        if w_status then
+            w_status:set_text("🔊 Unmuted Audio")
+            if dialog then dialog:update() end
+        end
     end
 end
 
 -------------------------------------------------------------------------------
 -- GUI Event Handlers
 -------------------------------------------------------------------------------
+local function click_browse_sft()
+    local handle = io.popen("osascript -e 'POSIX path of (choose file of type {\"sft\", \"json\"} with prompt \"Select Safety Filter (.sft) File:\")' 2>/dev/null")
+    if handle then
+        local selected_path = handle:read("*l")
+        handle:close()
+        if selected_path and selected_path ~= "" then
+            selected_path = selected_path:gsub("%s+$", "")
+            if w_sft_path then w_sft_path:set_text(selected_path) end
+            load_sft_file(selected_path)
+            if dialog then dialog:update() end
+        end
+    end
+end
+
 local function click_mark_in()
     local t = get_current_time_sec()
     if w_in_time then
@@ -440,7 +481,7 @@ local function click_add_filter()
 
     table.insert(sft_data.filters, new_filter)
     update_filter_list_display()
-    if w_status then w_status:set_text("Added filter #" .. new_filter.id .. " (" .. action_val:upper() .. " " .. format_time(in_t) .. " -> " .. format_time(out_t) .. ")") end
+    if w_status then w_status:set_text("Added filter #" .. new_filter.id .. " (" .. action_val:upper() .. " " .. format_time(in_t) .. " ➔ " .. format_time(out_t) .. ")") end
     if dialog then dialog:update() end
 end
 
@@ -499,15 +540,16 @@ function activate()
     local home = os.getenv("HOME") or "/Users/bijuneyyan"
     local default_export_path = home .. "/Desktop/movie.sft"
 
-    -- Row 1: Live Video Position Display (Columns 1..4)
-    w_live_time = dialog:add_label("<b>Current Video Position:</b> 00:00.0 (0.00s)", 1, 1, 4, 1)
+    -- Row 1: Live Video Position Display (Columns 1..5)
+    w_live_time = dialog:add_label("<b>Current Video Position:</b> 00:00.0 (0.00s)", 1, 1, 5, 1)
 
-    -- Row 2: File Loading & Path (Column 1 = Label, Column 2..3 = Input, Column 4 = Button)
+    -- Row 2: File Loading & Path (Col 1 = Label, Col 2..3 = Input, Col 4 = Browse, Col 5 = Load)
     dialog:add_label("<b>.sft File Path:</b>", 1, 2, 1, 1)
     w_sft_path = dialog:add_text_input(default_export_path, 2, 2, 2, 1)
-    dialog:add_button("Load .sft", click_load_sft, 4, 2, 1, 1)
+    dialog:add_button("Browse...", click_browse_sft, 4, 2, 1, 1)
+    dialog:add_button("Load .sft", click_load_sft, 5, 2, 1, 1)
 
-    -- Row 3: Timestamp Capture (Column 1 = Btn, Column 2 = Input, Column 3 = Btn, Column 4 = Input)
+    -- Row 3: Timestamp Capture (Col 1 = Set IN Btn, Col 2 = IN Input, Col 3 = Set OUT Btn, Col 4 = OUT Input)
     dialog:add_button("Set IN = Current Time", click_mark_in, 1, 3, 1, 1)
     w_in_time = dialog:add_text_input("0.00", 2, 3, 1, 1)
     dialog:add_button("Set OUT = Current Time", click_mark_out, 3, 3, 1, 1)
@@ -520,7 +562,7 @@ function activate()
     w_action_dropdown:add_value("Mute", 2)
 
     dialog:add_label("<b>Category:</b>", 3, 4, 1, 1)
-    w_category_dropdown = dialog:add_dropdown(4, 4, 1, 1)
+    w_category_dropdown = dialog:add_dropdown(4, 4, 2, 1)
     w_category_dropdown:add_value("Gore", 1)
     w_category_dropdown:add_value("Violence", 2)
     w_category_dropdown:add_value("Nudity", 3)
@@ -529,22 +571,22 @@ function activate()
 
     -- Row 5: Description & Add Button
     dialog:add_label("<b>Description:</b>", 1, 5, 1, 1)
-    w_desc = dialog:add_text_input("Filter description", 2, 5, 2, 1)
-    dialog:add_button("+ Add Filter", click_add_filter, 4, 5, 1, 1)
+    w_desc = dialog:add_text_input("Filter description", 2, 5, 3, 1)
+    dialog:add_button("+ Add Filter", click_add_filter, 5, 5, 1, 1)
 
-    -- Row 6: Filter List Section Header
-    dialog:add_label("<b>Active Filter Segments:</b>", 1, 6, 4, 1)
+    -- Row 6: Active Filter Segments Header
+    dialog:add_label("<b>Active Filter Segments:</b>", 1, 6, 5, 1)
 
-    -- Row 7: Filter List Text
-    w_filter_list = dialog:add_label("(No filter segments added yet)", 1, 7, 4, 1)
+    -- Row 7: Filter List Text Box (HTML vertical list)
+    w_filter_list = dialog:add_label("(No filter segments added yet)", 1, 7, 5, 1)
 
     -- Row 8: Export & Control Buttons
     dialog:add_button("Export .sft", click_export_sft, 1, 8, 1, 1)
     dialog:add_button("Clear All", click_clear_filters, 2, 8, 1, 1)
-    dialog:add_button("Toggle Filtering", toggle_filtering_state, 3, 8, 2, 1)
+    dialog:add_button("Toggle Filtering", toggle_filtering_state, 3, 8, 3, 1)
 
     -- Row 9: Status Bar
-    w_status = dialog:add_label("Ready. Play video and click 'Set IN' / 'Set OUT'.", 1, 9, 4, 1)
+    w_status = dialog:add_label("Ready. Play video and click 'Set IN' / 'Set OUT'.", 1, 9, 5, 1)
 
     update_filter_list_display()
     dialog:show()
