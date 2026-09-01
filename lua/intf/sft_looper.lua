@@ -1,11 +1,17 @@
 --[[
   Safety Filter (.sft) — Background Interface Script for VLC
   
-  This intf script runs a polling loop every 500ms while VLC is open.
-  It reads the active .sft file path written by the extension (sft_filter.lua),
-  loads the filter definitions, and monitors playback position.
+  This intf script runs a high-frequency polling loop (every 50ms / 20Hz)
+  while VLC is open. It reads the active .sft file path written by the
+  extension (sft_filter.lua), loads the filter definitions, and monitors
+  playback position with near-frame-accurate precision.
+  
   When the current playback time enters a "skip" segment, it seeks past it.
   When it enters a "mute" segment, it mutes audio (and unmutes when leaving).
+  
+  Why 50ms? VLC subtitles achieve frame accuracy via the C decoder pipeline,
+  which Lua cannot hook into. 50ms polling (20 checks/sec) is tighter than
+  one frame at 24fps (~42ms) and imperceptible to humans (~150ms blink).
   
   Install path (macOS):
     ~/Library/Application Support/org.videolan.vlc/lua/intf/sft_looper.lua
@@ -266,8 +272,8 @@ while not vlc.misc.should_die() do
         end
     end
 
-    -- Sleep 500ms before next check
-    vlc.misc.mwait(vlc.misc.mdate() + 500000)
+    -- Sleep 50ms (50,000 μs) before next check — 20Hz, tighter than 24fps
+    vlc.misc.mwait(vlc.misc.mdate() + 50000)
 end
 
 -- Cleanup: unmute if we muted
