@@ -373,14 +373,24 @@ end
 -------------------------------------------------------------------------------
 local function click_mark_in()
     local t = get_current_time_sec()
-    w_in_time:set_text(string.format("%.2f", t))
-    if w_status then w_status:set_text("Marked IN: " .. format_time(t)) end
+    if w_in_time then
+        w_in_time:set_text(string.format("%.2f", t))
+    end
+    if w_status then
+        w_status:set_text("✅ Marked IN Time: " .. format_time(t) .. " (" .. string.format("%.2f", t) .. "s)")
+    end
+    if dialog then dialog:update() end
 end
 
 local function click_mark_out()
     local t = get_current_time_sec()
-    w_out_time:set_text(string.format("%.2f", t))
-    if w_status then w_status:set_text("Marked OUT: " .. format_time(t)) end
+    if w_out_time then
+        w_out_time:set_text(string.format("%.2f", t))
+    end
+    if w_status then
+        w_status:set_text("✅ Marked OUT Time: " .. format_time(t) .. " (" .. string.format("%.2f", t) .. "s)")
+    end
+    if dialog then dialog:update() end
 end
 
 local function click_add_filter()
@@ -388,7 +398,8 @@ local function click_add_filter()
     local out_t = tonumber(w_out_time:get_text())
 
     if not in_t or not out_t or in_t >= out_t then
-        if w_status then w_status:set_text("Error: IN time must be less than OUT time!") end
+        if w_status then w_status:set_text("⚠️ Error: IN time must be less than OUT time!") end
+        if dialog then dialog:update() end
         return
     end
 
@@ -409,7 +420,8 @@ local function click_add_filter()
 
     table.insert(sft_data.filters, new_filter)
     update_filter_list_display()
-    if w_status then w_status:set_text("Added filter #" .. new_filter.id) end
+    if w_status then w_status:set_text("Added filter #" .. new_filter.id .. " (" .. action_val:upper() .. " " .. format_time(in_t) .. " -> " .. format_time(out_t) .. ")") end
+    if dialog then dialog:update() end
 end
 
 local function click_load_sft()
@@ -419,6 +431,7 @@ local function click_load_sft()
     else
         if w_status then w_status:set_text("Please enter a valid .sft path!") end
     end
+    if dialog then dialog:update() end
 end
 
 local function click_export_sft()
@@ -428,12 +441,14 @@ local function click_export_sft()
         w_sft_path:set_text(filepath)
     end
     save_sft_file(filepath)
+    if dialog then dialog:update() end
 end
 
 local function click_clear_filters()
     sft_data.filters = {}
     update_filter_list_display()
     if w_status then w_status:set_text("Cleared all filter markers.") end
+    if dialog then dialog:update() end
 end
 
 local function toggle_filtering_state()
@@ -441,6 +456,7 @@ local function toggle_filtering_state()
     if w_status then
         w_status:set_text("Filtering: " .. (filtering_enabled and "ENABLED" or "DISABLED"))
     end
+    if dialog then dialog:update() end
 end
 
 -------------------------------------------------------------------------------
@@ -464,46 +480,49 @@ function activate()
 
     dialog = vlc.dialog("Safety Filter (.sft) Manager")
 
-    -- Row 1: File Loading & Status
-    dialog:add_label("<b>.sft File Path:</b>", 1, 1, 1, 1)
-    w_sft_path = dialog:add_text_input("example_movie.sft", 2, 1, 3, 1)
-    dialog:add_button("Load .sft", click_load_sft, 5, 1, 1, 1)
+    -- Row 1: Live Video Position Display
+    w_live_time = dialog:add_label("<b>Current Video Position:</b> 00:00.0 (0.00s)", 1, 1, 5, 1)
 
-    -- Row 2: In / Out Markers
-    dialog:add_button("Mark IN", click_mark_in, 1, 2, 1, 1)
-    w_in_time = dialog:add_text_input("0.00", 2, 2, 1, 1)
-    dialog:add_button("Mark OUT", click_mark_out, 3, 2, 1, 1)
-    w_out_time = dialog:add_text_input("0.00", 4, 2, 1, 1)
+    -- Row 2: File Loading & Path
+    dialog:add_label("<b>.sft File Path:</b>", 1, 2, 1, 1)
+    w_sft_path = dialog:add_text_input("example_movie.sft", 2, 2, 3, 1)
+    dialog:add_button("Load .sft", click_load_sft, 5, 2, 1, 1)
 
-    -- Row 3: Action & Category Selection
-    dialog:add_label("<b>Action:</b>", 1, 3, 1, 1)
-    w_action_dropdown = dialog:add_dropdown(2, 3, 1, 1)
+    -- Row 3: In / Out Timestamp Capture Buttons
+    dialog:add_button("Set IN = Current Time", click_mark_in, 1, 3, 2, 1)
+    w_in_time = dialog:add_text_input("0.00", 3, 3, 1, 1)
+    dialog:add_button("Set OUT = Current Time", click_mark_out, 4, 3, 2, 1)
+    w_out_time = dialog:add_text_input("0.00", 6, 3, 1, 1)
+
+    -- Row 4: Action & Category Selection
+    dialog:add_label("<b>Action:</b>", 1, 4, 1, 1)
+    w_action_dropdown = dialog:add_dropdown(2, 4, 1, 1)
     w_action_dropdown:add_value("Skip", 1)
     w_action_dropdown:add_value("Mute", 2)
 
-    dialog:add_label("<b>Category:</b>", 3, 3, 1, 1)
-    w_category_dropdown = dialog:add_dropdown(4, 3, 1, 1)
+    dialog:add_label("<b>Category:</b>", 3, 4, 1, 1)
+    w_category_dropdown = dialog:add_dropdown(4, 4, 2, 1)
     w_category_dropdown:add_value("Gore", 1)
     w_category_dropdown:add_value("Violence", 2)
     w_category_dropdown:add_value("Nudity", 3)
     w_category_dropdown:add_value("Profanity", 4)
     w_category_dropdown:add_value("Other", 5)
 
-    -- Row 4: Description & Add Button
-    dialog:add_label("<b>Description:</b>", 1, 4, 1, 1)
-    w_desc = dialog:add_text_input("Filter description", 2, 4, 3, 1)
-    dialog:add_button("+ Add Filter", click_add_filter, 5, 4, 1, 1)
+    -- Row 5: Description & Add Button
+    dialog:add_label("<b>Description:</b>", 1, 5, 1, 1)
+    w_desc = dialog:add_text_input("Filter description", 2, 5, 3, 1)
+    dialog:add_button("+ Add Filter", click_add_filter, 5, 5, 1, 1)
 
-    -- Row 5: Filter List Box
-    w_filter_list = dialog:add_label("(No filter segments added yet)", 1, 5, 5, 3)
+    -- Row 6: Filter List Box
+    w_filter_list = dialog:add_label("(No filter segments added yet)", 1, 6, 5, 3)
 
-    -- Row 6: Export & Clear Buttons
-    dialog:add_button("Export .sft", click_export_sft, 1, 8, 2, 1)
-    dialog:add_button("Clear All", click_clear_filters, 3, 8, 1, 1)
-    dialog:add_button("Toggle Filtering", toggle_filtering_state, 4, 8, 2, 1)
+    -- Row 7: Export & Control Buttons
+    dialog:add_button("Export .sft", click_export_sft, 1, 9, 2, 1)
+    dialog:add_button("Clear All", click_clear_filters, 3, 9, 1, 1)
+    dialog:add_button("Toggle Filtering", toggle_filtering_state, 4, 9, 2, 1)
 
-    -- Row 7: Status Bar
-    w_status = dialog:add_label("Ready. Play video and mark IN/OUT points.", 1, 9, 5, 1)
+    -- Row 8: Status Bar
+    w_status = dialog:add_label("Ready. Play video and click 'Set IN' / 'Set OUT'.", 1, 10, 5, 1)
 
     update_filter_list_display()
     dialog:show()
@@ -543,7 +562,18 @@ function input_changed()
     end
 end
 
+local last_recorded_time = -1
+
 -- Extension update hook called continuously by VLC while dialog is active
 function update()
     process_active_filters()
+
+    if dialog and w_live_time then
+        local now = get_current_time_sec()
+        if math.abs(now - last_recorded_time) >= 0.2 then
+            last_recorded_time = now
+            w_live_time:set_text("<b>Current Video Position:</b> " .. format_time(now) .. " (" .. string.format("%.2f", now) .. "s)")
+            dialog:update()
+        end
+    end
 end
