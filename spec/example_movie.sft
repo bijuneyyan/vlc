@@ -1,0 +1,29 @@
+{
+  "sft_version": "1.0",
+  "metadata": {
+    "title": "Example Sample Video",
+    "year": 2024,
+    "duration_seconds": 120.0,
+    "created_by": "VLC Safety Filter Author"
+  },
+  "filters": [
+    {
+      "id": 1,
+      "start_time": 10.0,
+      "end_time": 15.5,
+      "action": "skip",
+      "category": "gore",
+      "severity": "high",
+      "description": "Skip graphic violent scene"
+    },
+    {
+      "id": 2,
+      "start_time": 30.0,
+      "end_time": 35.0,
+      "action": "mute",
+      "category": "profanity",
+      "severity": "medium",
+      "description": "Mute foul language"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+# macOS system files
+.DS_Store
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+
+# Test media files
+*.mp4
+*.mkv
+*.avi

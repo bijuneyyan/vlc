@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SafetyFilterFile",
+  "type": "object",
+  "required": ["sft_version", "metadata", "filters"],
+  "properties": {
+    "sft_version": {
+      "type": "string",
+      "enum": ["1.0"]
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["title"],
+      "properties": {
+        "title": { "type": "string" },
+        "year": { "type": "integer" },
+        "duration_seconds": { "type": "number" },
+        "created_by": { "type": "string" },
+        "checksum": { "type": "string" }
+      }
+    },
+    "filters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "start_time", "end_time", "action", "category"],
+        "properties": {
+          "id": { "type": "integer" },
+          "start_time": { "type": "number", "minimum": 0 },
+          "end_time": { "type": "number", "minimum": 0 },
+          "action": {
+            "type": "string",
+            "enum": ["skip", "mute"]
+          },
+          "category": {
+            "type": "string",
+            "enum": ["gore", "violence", "nudity", "profanity", "other"]
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["low", "medium", "high"]
+          },
+          "description": { "type": "string" }
+        }
+      }
+    }
+  }
+}
