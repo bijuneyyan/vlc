@@ -241,8 +241,19 @@ local w_toggle_filtering = nil
 local function get_current_time_sec()
     local input = vlc.object.input()
     if not input then return 0 end
-    local time_us = vlc.var.get(input, "time") or 0
-    return time_us / 1000000.0
+
+    local time_us = vlc.var.get(input, "time")
+    if time_us and type(time_us) == "number" and time_us > 0 then
+        return time_us / 1000000.0
+    end
+
+    local pos = vlc.var.get(input, "position")
+    local length_us = vlc.var.get(input, "length")
+    if pos and length_us and type(pos) == "number" and type(length_us) == "number" and length_us > 0 then
+        return (pos * length_us) / 1000000.0
+    end
+
+    return 0
 end
 
 local function seek_to_sec(target_sec)
@@ -315,6 +326,13 @@ local function save_sft_file(filepath)
         return false
     end
 
+    -- If filepath is relative or empty, expand to user Desktop
+    if not filepath or filepath == "" or filepath:sub(1,1) ~= "/" then
+        local home = os.getenv("HOME") or "/Users/bijuneyyan"
+        local filename = (filepath and filepath ~= "") and filepath or "movie.sft"
+        filepath = home .. "/Desktop/" .. filename
+    end
+
     local file, err = io.open(filepath, "w")
     if not file then
         if w_status then w_status:set_text("Error saving file: " .. tostring(err)) end
@@ -326,6 +344,7 @@ local function save_sft_file(filepath)
     file:close()
 
     current_sft_path = filepath
+    if w_sft_path then w_sft_path:set_text(filepath) end
     if w_status then w_status:set_text("Saved " .. #sft_data.filters .. " filters to " .. filepath) end
     return true
 end
@@ -436,10 +455,6 @@ end
 
 local function click_export_sft()
     local filepath = w_sft_path:get_text()
-    if not filepath or filepath == "" then
-        filepath = "movie.sft"
-        w_sft_path:set_text(filepath)
-    end
     save_sft_file(filepath)
     if dialog then dialog:update() end
 end
@@ -480,19 +495,22 @@ function activate()
 
     dialog = vlc.dialog("Safety Filter (.sft) Manager")
 
-    -- Row 1: Live Video Position Display
-    w_live_time = dialog:add_label("<b>Current Video Position:</b> 00:00.0 (0.00s)", 1, 1, 5, 1)
+    local home = os.getenv("HOME") or "/Users/bijuneyyan"
+    local default_export_path = home .. "/Desktop/movie.sft"
 
-    -- Row 2: File Loading & Path
+    -- Row 1: Live Video Position Display (Columns 1..4)
+    w_live_time = dialog:add_label("<b>Current Video Position:</b> 00:00.0 (0.00s)", 1, 1, 4, 1)
+
+    -- Row 2: File Loading & Path (Column 1 = Label, Column 2..3 = Input, Column 4 = Button)
     dialog:add_label("<b>.sft File Path:</b>", 1, 2, 1, 1)
-    w_sft_path = dialog:add_text_input("example_movie.sft", 2, 2, 3, 1)
-    dialog:add_button("Load .sft", click_load_sft, 5, 2, 1, 1)
+    w_sft_path = dialog:add_text_input(default_export_path, 2, 2, 2, 1)
+    dialog:add_button("Load .sft", click_load_sft, 4, 2, 1, 1)
 
-    -- Row 3: In / Out Timestamp Capture Buttons
-    dialog:add_button("Set IN = Current Time", click_mark_in, 1, 3, 2, 1)
-    w_in_time = dialog:add_text_input("0.00", 3, 3, 1, 1)
-    dialog:add_button("Set OUT = Current Time", click_mark_out, 4, 3, 2, 1)
-    w_out_time = dialog:add_text_input("0.00", 6, 3, 1, 1)
+    -- Row 3: Timestamp Capture (Column 1 = Btn, Column 2 = Input, Column 3 = Btn, Column 4 = Input)
+    dialog:add_button("Set IN = Current Time", click_mark_in, 1, 3, 1, 1)
+    w_in_time = dialog:add_text_input("0.00", 2, 3, 1, 1)
+    dialog:add_button("Set OUT = Current Time", click_mark_out, 3, 3, 1, 1)
+    w_out_time = dialog:add_text_input("0.00", 4, 3, 1, 1)
 
     -- Row 4: Action & Category Selection
     dialog:add_label("<b>Action:</b>", 1, 4, 1, 1)
@@ -501,7 +519,7 @@ function activate()
     w_action_dropdown:add_value("Mute", 2)
 
     dialog:add_label("<b>Category:</b>", 3, 4, 1, 1)
-    w_category_dropdown = dialog:add_dropdown(4, 4, 2, 1)
+    w_category_dropdown = dialog:add_dropdown(4, 4, 1, 1)
     w_category_dropdown:add_value("Gore", 1)
     w_category_dropdown:add_value("Violence", 2)
     w_category_dropdown:add_value("Nudity", 3)
@@ -510,19 +528,22 @@ function activate()
 
     -- Row 5: Description & Add Button
     dialog:add_label("<b>Description:</b>", 1, 5, 1, 1)
-    w_desc = dialog:add_text_input("Filter description", 2, 5, 3, 1)
-    dialog:add_button("+ Add Filter", click_add_filter, 5, 5, 1, 1)
+    w_desc = dialog:add_text_input("Filter description", 2, 5, 2, 1)
+    dialog:add_button("+ Add Filter", click_add_filter, 4, 5, 1, 1)
 
-    -- Row 6: Filter List Box
-    w_filter_list = dialog:add_label("(No filter segments added yet)", 1, 6, 5, 3)
+    -- Row 6: Filter List Section Header
+    dialog:add_label("<b>Active Filter Segments:</b>", 1, 6, 4, 1)
 
-    -- Row 7: Export & Control Buttons
-    dialog:add_button("Export .sft", click_export_sft, 1, 9, 2, 1)
-    dialog:add_button("Clear All", click_clear_filters, 3, 9, 1, 1)
-    dialog:add_button("Toggle Filtering", toggle_filtering_state, 4, 9, 2, 1)
+    -- Row 7: Filter List Text
+    w_filter_list = dialog:add_label("(No filter segments added yet)", 1, 7, 4, 1)
 
-    -- Row 8: Status Bar
-    w_status = dialog:add_label("Ready. Play video and click 'Set IN' / 'Set OUT'.", 1, 10, 5, 1)
+    -- Row 8: Export & Control Buttons
+    dialog:add_button("Export .sft", click_export_sft, 1, 8, 1, 1)
+    dialog:add_button("Clear All", click_clear_filters, 2, 8, 1, 1)
+    dialog:add_button("Toggle Filtering", toggle_filtering_state, 3, 8, 2, 1)
+
+    -- Row 9: Status Bar
+    w_status = dialog:add_label("Ready. Play video and click 'Set IN' / 'Set OUT'.", 1, 9, 4, 1)
 
     update_filter_list_display()
     dialog:show()
@@ -576,4 +597,5 @@ function update()
             dialog:update()
         end
     end
+end
 end
