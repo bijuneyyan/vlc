@@ -557,14 +557,14 @@ function activate()
     local home = os.getenv("HOME") or "/Users/bijuneyyan"
     local default_export_path = home .. "/Desktop/movie.sft"
 
-    -- Row 1: Live Video Position Display (Columns 1..5)
-    w_live_time = dialog:add_label("<b>Current Video Position:</b> 00:00.0 (0.00s)", 1, 1, 5, 1)
+    -- Row 1: Live Video Position Display (Cols 1..4)
+    w_live_time = dialog:add_label("<b>Current Video Position:</b> 00:00.0 (0.00s)", 1, 1, 4, 1)
 
-    -- Row 2: File Loading & Path (Col 1 = Label, Col 2..3 = Input, Col 4 = Browse, Col 5 = Load)
+    -- Row 2: File Loading & Path (Col 1 = Label, Col 2 = Input, Col 3 = Browse, Col 4 = Load)
     dialog:add_label("<b>.sft File Path:</b>", 1, 2, 1, 1)
-    w_sft_path = dialog:add_text_input(default_export_path, 2, 2, 2, 1)
-    dialog:add_button("Browse...", click_browse_sft, 4, 2, 1, 1)
-    dialog:add_button("Load .sft", click_load_sft, 5, 2, 1, 1)
+    w_sft_path = dialog:add_text_input(default_export_path, 2, 2, 1, 1)
+    dialog:add_button("Browse...", click_browse_sft, 3, 2, 1, 1)
+    dialog:add_button("Load .sft", click_load_sft, 4, 2, 1, 1)
 
     -- Row 3: Timestamp Capture (Col 1 = Set IN Btn, Col 2 = IN Input, Col 3 = Set OUT Btn, Col 4 = OUT Input)
     dialog:add_button("Set IN = Current Time", click_mark_in, 1, 3, 1, 1)
@@ -572,38 +572,38 @@ function activate()
     dialog:add_button("Set OUT = Current Time", click_mark_out, 3, 3, 1, 1)
     w_out_time = dialog:add_text_input("0.00", 4, 3, 1, 1)
 
-    -- Row 4: Action & Category Selection
+    -- Row 4: Action & Category Selection (Col 1 = Action Lbl, Col 2 = Action Drop, Col 3 = Cat Lbl, Col 4 = Cat Drop)
     dialog:add_label("<b>Action:</b>", 1, 4, 1, 1)
     w_action_dropdown = dialog:add_dropdown(2, 4, 1, 1)
     w_action_dropdown:add_value("Skip", 1)
     w_action_dropdown:add_value("Mute", 2)
 
     dialog:add_label("<b>Category:</b>", 3, 4, 1, 1)
-    w_category_dropdown = dialog:add_dropdown(4, 4, 2, 1)
+    w_category_dropdown = dialog:add_dropdown(4, 4, 1, 1)
     w_category_dropdown:add_value("Gore", 1)
     w_category_dropdown:add_value("Violence", 2)
     w_category_dropdown:add_value("Nudity", 3)
     w_category_dropdown:add_value("Profanity", 4)
     w_category_dropdown:add_value("Other", 5)
 
-    -- Row 5: Description Input & + Add Filter Button
+    -- Row 5: Description & + Add Filter Button (Col 1 = Desc Lbl, Col 2..3 = Desc Input, Col 4 = + Add Filter Btn)
     dialog:add_label("<b>Description:</b>", 1, 5, 1, 1)
     w_desc = dialog:add_text_input("Filter description", 2, 5, 2, 1)
-    dialog:add_button("+ Add Filter", click_add_filter, 4, 5, 2, 1)
+    dialog:add_button("+ Add Filter", click_add_filter, 4, 5, 1, 1)
 
-    -- Row 6: Active Filter Segments Header
-    dialog:add_label("<b>Active Filter Segments:</b>", 1, 6, 5, 1)
+    -- Row 6: Active Filter Segments Header (Cols 1..4)
+    dialog:add_label("<b>Active Filter Segments:</b>", 1, 6, 4, 1)
 
-    -- Row 7: Filter List Text Box (Multi-line scrollable box, span 2 rows)
-    w_filter_list = dialog:add_text_input("(No filter segments added yet)", 1, 7, 5, 2)
+    -- Row 7: Filter List Text Box (Cols 1..4, row_span = 2)
+    w_filter_list = dialog:add_text_input("(No filter segments added yet)", 1, 7, 4, 2)
 
-    -- Row 9: Export & Control Buttons
+    -- Row 9: Export & Control Buttons (Col 1 = Export, Col 2 = Clear, Col 3..4 = Toggle)
     dialog:add_button("Export .sft", click_export_sft, 1, 9, 1, 1)
     dialog:add_button("Clear All", click_clear_filters, 2, 9, 1, 1)
-    dialog:add_button("Toggle Filtering", toggle_filtering_state, 3, 9, 3, 1)
+    dialog:add_button("Toggle Filtering", toggle_filtering_state, 3, 9, 2, 1)
 
-    -- Row 10: Status Bar
-    w_status = dialog:add_label("Ready. Play video and click 'Set IN' / 'Set OUT'.", 1, 10, 5, 1)
+    -- Row 10: Status Bar (Cols 1..4)
+    w_status = dialog:add_label("Ready. Play video and click 'Set IN' / 'Set OUT'.", 1, 10, 4, 1)
 
     update_filter_list_display()
     dialog:show()
