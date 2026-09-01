@@ -241,39 +241,49 @@ end
 -------------------------------------------------------------------------------
 vlc.msg.info("[SFT Looper] Safety Filter background monitor started.")
 
-while not vlc.misc.should_die() do
-    -- Check if the active .sft path has changed
-    local active_path = get_active_sft_path()
-    if active_path and active_path ~= loaded_path then
-        load_sft_file(active_path)
-    end
+-- VLC 3.0.x does not have vlc.misc.should_die().
+-- The intf script is terminated automatically when VLC exits.
+-- We wrap the loop body in pcall so any error during shutdown is silent.
+while true do
+    local ok, err = pcall(function()
+        -- Check if the active .sft path has changed
+        local active_path = get_active_sft_path()
+        if active_path and active_path ~= loaded_path then
+            load_sft_file(active_path)
+        end
 
-    -- Only process if we have filters and media is playing
-    if sft_data and sft_data.filters and #sft_data.filters > 0 then
-        local now = get_time_seconds()
-        if now and now >= 0 then
-            local inside_mute = false
+        -- Only process if we have filters and media is playing
+        if sft_data and sft_data.filters and #sft_data.filters > 0 then
+            local now = get_time_seconds()
+            if now and now >= 0 then
+                local inside_mute = false
 
-            for _, filter in ipairs(sft_data.filters) do
-                if now >= filter.start_time and now < filter.end_time then
-                    if filter.action == "skip" then
-                        vlc.msg.info("[SFT Looper] SKIP triggered at " ..
-                            string.format("%.2f", now) .. "s -> seeking to " ..
-                            string.format("%.2f", filter.end_time + 0.2) .. "s")
-                        seek_to(filter.end_time + 0.2)
-                        break
-                    elseif filter.action == "mute" then
-                        inside_mute = true
+                for _, filter in ipairs(sft_data.filters) do
+                    if now >= filter.start_time and now < filter.end_time then
+                        if filter.action == "skip" then
+                            vlc.msg.info("[SFT Looper] SKIP triggered at " ..
+                                string.format("%.2f", now) .. "s -> seeking to " ..
+                                string.format("%.2f", filter.end_time + 0.2) .. "s")
+                            seek_to(filter.end_time + 0.2)
+                            break
+                        elseif filter.action == "mute" then
+                            inside_mute = true
+                        end
                     end
                 end
+
+                set_mute(inside_mute)
             end
-
-            set_mute(inside_mute)
         end
-    end
 
-    -- Sleep 50ms (50,000 μs) before next check — 20Hz, tighter than 24fps
-    vlc.misc.mwait(vlc.misc.mdate() + 50000)
+        -- Sleep 50ms (50,000 μs) — 20Hz, tighter than 24fps
+        vlc.misc.mwait(vlc.misc.mdate() + 50000)
+    end)
+
+    if not ok then
+        -- VLC is shutting down or an error occurred — exit loop
+        break
+    end
 end
 
 -- Cleanup: unmute if we muted
@@ -282,3 +292,4 @@ if muted_by_sft then
 end
 
 vlc.msg.info("[SFT Looper] Safety Filter background monitor stopped.")
+
