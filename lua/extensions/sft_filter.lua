@@ -466,14 +466,14 @@ function activate()
 
     -- Row 1: File Loading & Status
     dialog:add_label("<b>.sft File Path:</b>", 1, 1, 1, 1)
-    w_sft_path = dialog:add_input("example_movie.sft", 2, 1, 3, 1)
+    w_sft_path = dialog:add_text_input("example_movie.sft", 2, 1, 3, 1)
     dialog:add_button("Load .sft", click_load_sft, 5, 1, 1, 1)
 
     -- Row 2: In / Out Markers
     dialog:add_button("Mark IN", click_mark_in, 1, 2, 1, 1)
-    w_in_time = dialog:add_input("0.00", 2, 2, 1, 1)
+    w_in_time = dialog:add_text_input("0.00", 2, 2, 1, 1)
     dialog:add_button("Mark OUT", click_mark_out, 3, 2, 1, 1)
-    w_out_time = dialog:add_input("0.00", 4, 2, 1, 1)
+    w_out_time = dialog:add_text_input("0.00", 4, 2, 1, 1)
 
     -- Row 3: Action & Category Selection
     dialog:add_label("<b>Action:</b>", 1, 3, 1, 1)
@@ -491,7 +491,7 @@ function activate()
 
     -- Row 4: Description & Add Button
     dialog:add_label("<b>Description:</b>", 1, 4, 1, 1)
-    w_desc = dialog:add_input("Filter description", 2, 4, 3, 1)
+    w_desc = dialog:add_text_input("Filter description", 2, 4, 3, 1)
     dialog:add_button("+ Add Filter", click_add_filter, 5, 4, 1, 1)
 
     -- Row 5: Filter List Box
@@ -507,6 +507,7 @@ function activate()
 
     update_filter_list_display()
     dialog:show()
+    dialog:update()
 end
 
 function deactivate()
