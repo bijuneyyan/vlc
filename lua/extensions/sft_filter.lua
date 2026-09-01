@@ -446,7 +446,22 @@ end
 -------------------------------------------------------------------------------
 -- VLC Extension Lifecycle Callbacks
 -------------------------------------------------------------------------------
+function menu()
+    return {"Open Safety Filter Manager"}
+end
+
+function trigger_menu(id)
+    if id == 1 then
+        activate()
+    end
+end
+
 function activate()
+    if dialog then
+        dialog:show()
+        return
+    end
+
     dialog = vlc.dialog("Safety Filter (.sft) Manager")
 
     -- Row 1: File Loading & Status
@@ -491,6 +506,7 @@ function activate()
     w_status = dialog:add_label("Ready. Play video and mark IN/OUT points.", 1, 9, 5, 1)
 
     update_filter_list_display()
+    dialog:show()
 end
 
 function deactivate()
