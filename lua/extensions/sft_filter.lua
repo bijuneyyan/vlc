@@ -242,21 +242,18 @@ local function get_current_time_sec()
     local input = vlc.object.input()
     if not input then return nil end
 
-    local raw_time = vlc.var.get(input, "time")
-    local raw_len = vlc.var.get(input, "length")
-
-    if raw_time and type(raw_time) == "number" then
-        if raw_time > 10000 then
-            return raw_time / 1000000.0
-        else
-            return raw_time
-        end
-    end
-
     local pos = vlc.var.get(input, "position")
-    if pos and raw_len and type(pos) == "number" and type(raw_len) == "number" and raw_len > 0 then
+    local raw_len = vlc.var.get(input, "length")
+    local raw_time = vlc.var.get(input, "time")
+
+    -- Prefer position * length because position is continuously updated on every frame tick
+    if pos and raw_len and type(pos) == "number" and type(raw_len) == "number" and raw_len > 0 and pos >= 0 then
         local len_sec = (raw_len > 10000) and (raw_len / 1000000.0) or raw_len
         return pos * len_sec
+    end
+
+    if raw_time and type(raw_time) == "number" and raw_time >= 0 then
+        return (raw_time > 10000) and (raw_time / 1000000.0) or raw_time
     end
 
     return nil
@@ -267,20 +264,21 @@ local function seek_to_sec(target_sec)
     if not input then return end
 
     local raw_len = vlc.var.get(input, "length") or 0
+    local total_sec = (raw_len > 10000) and (raw_len / 1000000.0) or raw_len
+
+    -- 1. Seek using position fraction (guaranteed frame seeking in VLC core)
+    if total_sec > 0 then
+        local pos_frac = target_sec / total_sec
+        if pos_frac >= 0 and pos_frac <= 1.0 then
+            vlc.var.set(input, "position", pos_frac)
+        end
+    end
+
+    -- 2. Seek using time microseconds
     if raw_len > 10000 then
         vlc.var.set(input, "time", math.floor(target_sec * 1000000))
     else
         vlc.var.set(input, "time", target_sec)
-    end
-
-    if raw_len > 0 then
-        local total_sec = (raw_len > 10000) and (raw_len / 1000000.0) or raw_len
-        if total_sec > 0 then
-            local pos_frac = target_sec / total_sec
-            if pos_frac >= 0 and pos_frac <= 1.0 then
-                vlc.var.set(input, "position", pos_frac)
-            end
-        end
     end
 end
 
@@ -596,16 +594,16 @@ function activate()
     -- Row 6: Active Filter Segments Header
     dialog:add_label("<b>Active Filter Segments:</b>", 1, 6, 5, 1)
 
-    -- Row 7: Filter List Text Box (HTML vertical list)
-    w_filter_list = dialog:add_label("(No filter segments added yet)", 1, 7, 5, 1)
+    -- Row 7: Filter List Text Box (Multi-line scrollable box, span 2 rows)
+    w_filter_list = dialog:add_text_input("(No filter segments added yet)", 1, 7, 5, 2)
 
-    -- Row 8: Export & Control Buttons
-    dialog:add_button("Export .sft", click_export_sft, 1, 8, 1, 1)
-    dialog:add_button("Clear All", click_clear_filters, 2, 8, 1, 1)
-    dialog:add_button("Toggle Filtering", toggle_filtering_state, 3, 8, 3, 1)
+    -- Row 9: Export & Control Buttons
+    dialog:add_button("Export .sft", click_export_sft, 1, 9, 1, 1)
+    dialog:add_button("Clear All", click_clear_filters, 2, 9, 1, 1)
+    dialog:add_button("Toggle Filtering", toggle_filtering_state, 3, 9, 3, 1)
 
-    -- Row 9: Status Bar
-    w_status = dialog:add_label("Ready. Play video and click 'Set IN' / 'Set OUT'.", 1, 9, 5, 1)
+    -- Row 10: Status Bar
+    w_status = dialog:add_label("Ready. Play video and click 'Set IN' / 'Set OUT'.", 1, 10, 5, 1)
 
     update_filter_list_display()
     dialog:show()
