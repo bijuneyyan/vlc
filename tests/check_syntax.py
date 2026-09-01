@@ -1,18 +1,24 @@
 import sys
+import re
 
 def check_lua_syntax(filename):
     with open(filename, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
+        content = f.read()
+    
+    # Remove block comments --[[ ... ]]
+    content = re.sub(r'--\[\[.*?\]\]', '', content, flags=re.DOTALL)
+    # Remove long strings [[ ... ]]
+    content = re.sub(r'\[\[.*?\]\]', '""', content, flags=re.DOTALL)
+    # Remove line comments -- ...
+    content = re.sub(r'--.*', '', content)
+    
+    lines = content.splitlines()
     
     stack = []
-    keywords = ['function', 'if', 'for', 'while', 'do']
-    
     line_num = 0
     for line in lines:
         line_num += 1
-        # remove comments
-        code = line.split('--')[0].strip()
-        words = code.split()
+        words = re.findall(r'\b[a-zA-Z_]\w*\b', line)
         for w in words:
             if w in ['function', 'if', 'for', 'while']:
                 stack.append((w, line_num))
@@ -26,7 +32,7 @@ def check_lua_syntax(filename):
         print(f"❌ Syntax Error: Unclosed block starting at line {stack[-1][1]} ({stack[-1][0]})")
         return False
     
-    print("✅ Basic keyword matching syntax check passed!")
+    print("✅ Lua block structure syntax check passed cleanly!")
     return True
 
 if __name__ == "__main__":

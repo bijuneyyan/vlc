@@ -240,12 +240,12 @@ local w_toggle_filtering = nil
 -------------------------------------------------------------------------------
 local function get_current_time_sec()
     local input = vlc.object.input()
-    if not input then return 0 end
+    if not input then return nil end
 
     local raw_time = vlc.var.get(input, "time")
     local raw_len = vlc.var.get(input, "length")
 
-    if raw_time and type(raw_time) == "number" and raw_time > 0 then
+    if raw_time and type(raw_time) == "number" then
         if raw_time > 10000 then
             return raw_time / 1000000.0
         else
@@ -259,7 +259,7 @@ local function get_current_time_sec()
         return pos * len_sec
     end
 
-    return 0
+    return nil
 end
 
 local function seek_to_sec(target_sec)
@@ -276,7 +276,10 @@ local function seek_to_sec(target_sec)
     if raw_len > 0 then
         local total_sec = (raw_len > 10000) and (raw_len / 1000000.0) or raw_len
         if total_sec > 0 then
-            vlc.var.set(input, "position", target_sec / total_sec)
+            local pos_frac = target_sec / total_sec
+            if pos_frac >= 0 and pos_frac <= 1.0 then
+                vlc.var.set(input, "position", pos_frac)
+            end
         end
     end
 end
@@ -295,23 +298,28 @@ end
 
 local function update_filter_list_display()
     if not w_filter_list then return end
-    local display_html = ""
+    local display_lines = {}
     for i, filter in ipairs(sft_data.filters) do
         local action_badge = (filter.action == "skip") and "⏩ SKIP" or "🔇 MUTE"
-        display_html = display_html .. string.format(
-            "<b>#%d</b> | <b>%s</b> | %s ➔ %s | Cat: <i>%s</i> %s<br/>",
+        local desc_str = (filter.description and filter.description ~= "") and (" (" .. filter.description .. ")") or ""
+        local line = string.format(
+            "#%d | %s | %s -> %s | Cat: %s%s",
             i,
             action_badge,
             format_time(filter.start_time),
             format_time(filter.end_time),
             filter.category:upper(),
-            (filter.description and filter.description ~= "") and ("(" .. filter.description .. ")") or ""
+            desc_str
         )
+        table.insert(display_lines, line)
     end
-    if display_html == "" then
-        display_html = "(No filter segments added yet)"
+    
+    local text = table.concat(display_lines, "\n")
+    if text == "" then
+        text = "(No filter segments added yet)"
     end
-    w_filter_list:set_text(display_html)
+    w_filter_list:set_text(text)
+    if dialog then dialog:update() end
 end
 
 -------------------------------------------------------------------------------
@@ -374,20 +382,19 @@ end
 -------------------------------------------------------------------------------
 local function process_active_filters()
     if vlc.keep_alive then vlc.keep_alive() end
-    if not filtering_enabled or not sft_data or not sft_data.filters then return end
+    if not filtering_enabled or not sft_data or not sft_data.filters or #sft_data.filters == 0 then return end
     
     local now_sec = get_current_time_sec()
-    if now_sec <= 0 then return end
+    if not now_sec then return end
 
     local inside_mute_zone = false
 
     for _, filter in ipairs(sft_data.filters) do
         if now_sec >= filter.start_time and now_sec < (filter.end_time - 0.05) then
             if filter.action == "skip" then
-                -- Perform dual seek (time & position)
-                seek_to_sec(filter.end_time + 0.1)
+                seek_to_sec(filter.end_time + 0.15)
                 if w_status then
-                    w_status:set_text("⏩ Skipped " .. filter.category:upper() .. ": " .. format_time(filter.start_time) .. " ➔ " .. format_time(filter.end_time))
+                    w_status:set_text("⏩ Skipped " .. filter.category:upper() .. ": " .. format_time(filter.start_time) .. " -> " .. format_time(filter.end_time))
                     if dialog then dialog:update() end
                 end
                 return
@@ -419,12 +426,24 @@ end
 -- GUI Event Handlers
 -------------------------------------------------------------------------------
 local function click_browse_sft()
-    local handle = io.popen("osascript -e 'POSIX path of (choose file of type {\"sft\", \"json\"} with prompt \"Select Safety Filter (.sft) File:\")' 2>/dev/null")
+    local script = [[
+        try
+            set p to POSIX path of (choose file or folder with prompt "Select Safety Filter (.sft) File or Folder:")
+            return p
+        on error
+            return ""
+        end try
+    ]]
+    local handle = io.popen("osascript -e '" .. script:gsub("\n", " ") .. "' 2>/dev/null")
     if handle then
         local selected_path = handle:read("*l")
         handle:close()
         if selected_path and selected_path ~= "" then
             selected_path = selected_path:gsub("%s+$", "")
+            if selected_path:sub(-1) == "/" or selected_path:sub(-4) ~= ".sft" then
+                if selected_path:sub(-1) ~= "/" then selected_path = selected_path .. "/" end
+                selected_path = selected_path .. "movie.sft"
+            end
             if w_sft_path then w_sft_path:set_text(selected_path) end
             load_sft_file(selected_path)
             if dialog then dialog:update() end
