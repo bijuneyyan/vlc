@@ -487,15 +487,20 @@ local function set_filtering_enabled(enabled)
     end
 end
 
+local w_toggle_btn = nil
+
 local function on_toggle_filtering()
     local currently_enabled = is_filtering_enabled()
     local new_state = not currently_enabled
     set_filtering_enabled(new_state)
+    if w_toggle_btn then
+        w_toggle_btn:set_text(new_state and "Enabled" or "Disabled")
+    end
     if w_status then
         if new_state then
-            w_status:set_text("✅ Safety Filtering: ENABLED (Active)")
+            w_status:set_text("✅ Filter Status: Enabled (Active)")
         else
-            w_status:set_text("⏸️ Safety Filtering: DISABLED (Bypassed)")
+            w_status:set_text("⏸️ Filter Status: Disabled (Bypassed)")
         end
     end
     if dlg then dlg:update() end
@@ -581,13 +586,15 @@ function activate()
     dlg:add_button("Clear All", on_clear, 3, row, 1, 1)
     dlg:add_button("Close", close, 4, row, 1, 1)
 
-    -- Row 7: Toggle Filtering ON/OFF Button
+    -- Row 7: Filter Status Label & Toggle Button
     row = row + 1
-    dlg:add_button("Toggle Filtering (Enable / Disable)", on_toggle_filtering, 1, row, 4, 1)
+    dlg:add_label("<b>Filter Status:</b>", 1, row, 1, 1)
+    local toggle_title = is_filtering_enabled() and "Enabled" or "Disabled"
+    w_toggle_btn = dlg:add_button(toggle_title, on_toggle_filtering, 2, row, 3, 1)
 
     -- Row 8: Status Bar
     row = row + 1
-    local init_status = is_filtering_enabled() and "Ready. ✅ Safety Filtering: ENABLED" or "Ready. ⏸️ Safety Filtering: DISABLED"
+    local init_status = is_filtering_enabled() and "Ready. Filter Status: Enabled" or "Ready. Filter Status: Disabled"
     w_status = dlg:add_label(init_status, 1, row, 4, 1)
 
     refresh_filter_list()
