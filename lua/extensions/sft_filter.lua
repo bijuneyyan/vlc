@@ -523,7 +523,7 @@ function activate()
 
     -- ZONE 2: Mark Filter Segment
     row = row + 1
-    dlg:add_label("<b>--- 1. Mark Filter Segment ---</b>", 1, row, 4, 1)
+    dlg:add_label("<b>Mark Filter Segment</b>", 1, row, 4, 1)
 
     row = row + 1
     dlg:add_button("Set IN",  on_set_in,  1, row, 1, 1)
@@ -547,31 +547,31 @@ function activate()
     row = row + 1
     dlg:add_label("<b>Note:</b>", 1, row, 1, 1)
     w_desc = dlg:add_text_input("", 2, row, 2, 1)
-    dlg:add_button("[+] Add Filter", on_add_filter, 4, row, 1, 1)
+    dlg:add_button("Add Filter", on_add_filter, 4, row, 1, 1)
 
     -- ZONE 3: Active Filters
     row = row + 1
-    dlg:add_label("<b>--- 2. Active Filters ---</b>", 1, row, 4, 1)
+    dlg:add_label("<b>Active Filters</b>", 1, row, 4, 1)
 
     row = row + 1
     w_list = dlg:add_list(1, row, 4, 1)
 
     row = row + 1
-    dlg:add_button("[-] Remove Selected", on_remove_selected, 1, row, 2, 1)
-    dlg:add_button("[x] Clear All",       on_clear,           3, row, 2, 1)
+    dlg:add_button("Remove Selected", on_remove_selected, 1, row, 2, 1)
+    dlg:add_button("Clear All",       on_clear,           3, row, 2, 1)
 
-    -- ZONE 4: File Storage
+    -- ZONE 4: File Details
     row = row + 1
-    dlg:add_label("<b>--- 3. File Storage (.sft) ---</b>", 1, row, 4, 1)
+    dlg:add_label("<b>File Details</b>", 1, row, 4, 1)
 
     row = row + 1
     w_sft_path = dlg:add_text_input(default_path, 1, row, 2, 1)
-    dlg:add_button("[..] Browse", on_browse, 3, row, 1, 1)
-    dlg:add_button("[v] Load",    on_load,   4, row, 1, 1)
+    dlg:add_button("Browse", on_browse, 3, row, 1, 1)
+    dlg:add_button("Load",   on_load,   4, row, 1, 1)
 
     row = row + 1
-    dlg:add_button("[S] Save .sft",  on_save,    1, row, 2, 1)
-    dlg:add_button("[A] Save As...", on_save_as, 3, row, 2, 1)
+    dlg:add_button("Save .sft",  on_save,    1, row, 2, 1)
+    dlg:add_button("Save As...", on_save_as, 3, row, 2, 1)
 
     -- Status bar
     row = row + 1
