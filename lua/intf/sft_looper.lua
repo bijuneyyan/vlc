@@ -263,37 +263,61 @@ end
 -------------------------------------------------------------------------------
 vlc.msg.info("[SFT] Safety Filter background monitor started (50ms / 20Hz)")
 
+local tick = 0                 -- counter for periodic re-scan
+local RESCAN_INTERVAL = 40     -- re-check .sft file every 40 ticks = ~2 seconds
+local current_sft_path = ""    -- path of the currently loaded .sft file
+
 while true do
     local ok, err = pcall(function()
 
-        -- 1. Detect video changes (like subtitle auto-loading)
         local uri = get_current_uri()
+
+        -- 1. On video change: reset everything
         if uri and uri ~= current_video_uri then
             current_video_uri = uri
-            filters = {}  -- clear old filters
+            current_sft_path = ""
+            filters = {}
+            tick = RESCAN_INTERVAL  -- force immediate scan
             if muted_by_sft then set_mute(false) end
-
-
-            local sft_path = find_sft_for_video(uri)
-            if sft_path then
-                filters = load_filters(sft_path)
-                vlc.msg.info("[SFT] Video: " .. uri)
-                vlc.msg.info("[SFT] Found matching .sft: " .. sft_path)
-                vlc.msg.info("[SFT] Loaded " .. #filters .. " filter(s)")
-            else
-                vlc.msg.info("[SFT] Video: " .. uri)
-                vlc.msg.info("[SFT] No matching .sft file found — filtering OFF for this video")
-            end
+            vlc.msg.info("[SFT] New video: " .. uri)
         end
 
-        -- 2. Apply filters if any are loaded
+        -- 2. Periodic re-scan for .sft file (every ~2 seconds)
+        --    Detects: file added, file removed, file modified
+        if uri and tick >= RESCAN_INTERVAL then
+            tick = 0
+
+            local sft_path = find_sft_for_video(uri)
+            if sft_path and sft_path ~= current_sft_path then
+                -- .sft file appeared or changed
+                filters = load_filters(sft_path)
+                current_sft_path = sft_path
+                vlc.msg.info("[SFT] Loaded " .. #filters .. " filter(s) from: " .. sft_path)
+            elseif sft_path and sft_path == current_sft_path then
+                -- Same file — reload in case contents changed
+                local new_filters = load_filters(sft_path)
+                if #new_filters ~= #filters then
+                    filters = new_filters
+                    vlc.msg.info("[SFT] Reloaded " .. #filters .. " filter(s) from: " .. sft_path)
+                end
+            elseif not sft_path and current_sft_path ~= "" then
+                -- .sft file was removed
+                filters = {}
+                current_sft_path = ""
+                if muted_by_sft then set_mute(false) end
+                vlc.msg.info("[SFT] .sft file removed — filtering OFF")
+            end
+        end
+        tick = tick + 1
+
+        -- 3. Apply filters if any are loaded
         if #filters > 0 then
             local now = get_time_seconds()
             if now and now >= 0 then
                 local inside_mute = false
 
                 for _, f in ipairs(filters) do
-                    -- Filters are sorted by start_time — skip past irrelevant ones
+                    -- Filters are sorted by start_time — early exit
                     if f.start_time > now + 1 then break end
 
                     if now >= f.start_time and now < f.end_time then
@@ -313,7 +337,7 @@ while true do
             end
         end
 
-        -- 3. Sleep 50ms (50,000 μs)
+        -- 4. Sleep 50ms (50,000 μs)
         vlc.misc.mwait(vlc.misc.mdate() + 50000)
     end)
 
@@ -325,3 +349,4 @@ if muted_by_sft then
     pcall(function() vlc.volume.set(256) end)
 end
 vlc.msg.info("[SFT] Safety Filter background monitor stopped.")
+
