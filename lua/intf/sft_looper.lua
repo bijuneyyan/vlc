@@ -246,7 +246,7 @@ local function seek_to(target_sec)
     end
 end
 
-local is_windows = (package.config:sub(1,1) == "\\")
+local is_windows = (os.getenv("WINDIR") ~= nil or (os.getenv("OS") and string.find(os.getenv("OS"):lower(), "windows") ~= nil))
 
 local function is_filtering_enabled()
     local path = ""
