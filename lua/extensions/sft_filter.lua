@@ -186,7 +186,12 @@ local sft_data = {
 }
 
 local current_sft_path = ""
-local is_windows = (os.getenv("WINDIR") ~= nil)
+local function check_is_windows()
+    if os and os.getenv then
+        return (os.getenv("WINDIR") ~= nil or os.getenv("APPDATA") ~= nil)
+    end
+    return false
+end
 
 local w_sft_path   = nil
 local w_in_time    = nil
@@ -314,7 +319,7 @@ end
 -- Filter status flag
 -------------------------------------------------------------------------------
 local function get_user_data_dir()
-    if is_windows then
+    if check_is_windows() then
         local appdata = os.getenv("APPDATA") or "C:\\"
         return appdata .. "\\vlc\\lua\\extensions\\userdata"
     else
@@ -325,7 +330,7 @@ end
 
 local function get_flag_path()
     local dir = get_user_data_dir()
-    local sep = is_windows and "\\" or "/"
+    local sep = check_is_windows() and "\\" or "/"
     return dir .. sep .. "sft_disabled.flag"
 end
 
@@ -341,7 +346,7 @@ local function set_filtering_enabled(enabled)
         os.remove(path)
     else
         local dir = get_user_data_dir()
-        if is_windows then
+        if check_is_windows() then
             os.execute("if not exist \"" .. dir .. "\" mkdir \"" .. dir .. "\"")
         else
             os.execute("mkdir -p \"" .. dir .. "\"")
@@ -356,7 +361,7 @@ end
 -------------------------------------------------------------------------------
 local function on_browse()
     local result = nil
-    if is_windows then
+    if check_is_windows() then
         local cmd = [[powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.OpenFileDialog; $f.Filter = 'Safety Filter (*.sft)|*.sft'; if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $f.FileName }"]]
         local h = io.popen(cmd)
         if h then result = h:read("*l"); h:close() end
@@ -448,7 +453,7 @@ end
 
 local function on_save_as()
     local sel = nil
-    if is_windows then
+    if check_is_windows() then
         local cmd = [[powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.SaveFileDialog; $f.Filter = 'Safety Filter (*.sft)|*.sft'; $f.DefaultExt = 'sft'; if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $f.FileName }"]]
         local h = io.popen(cmd)
         if h then sel = h:read("*l"); h:close() end
