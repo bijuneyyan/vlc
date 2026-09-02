@@ -9,7 +9,7 @@ function descriptor()
         url         = "https://github.com/user/vlc-sft",
         shortdesc   = "Safety Filter (.sft) Editor",
         description = "Mark in/out points on video to create .sft filter files.",
-        capabilities = {"input-listener", "menu"}
+        capabilities = {"menu"}
     }
 end
 
