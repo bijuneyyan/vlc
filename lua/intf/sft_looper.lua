@@ -273,11 +273,16 @@ while true do
             filters = {}  -- clear old filters
             if muted_by_sft then set_mute(false) end
 
+
             local sft_path = find_sft_for_video(uri)
             if sft_path then
                 filters = load_filters(sft_path)
-                vlc.msg.info("[SFT] Auto-loaded " .. #filters ..
-                    " filters from: " .. sft_path)
+                vlc.msg.info("[SFT] Video: " .. uri)
+                vlc.msg.info("[SFT] Found matching .sft: " .. sft_path)
+                vlc.msg.info("[SFT] Loaded " .. #filters .. " filter(s)")
+            else
+                vlc.msg.info("[SFT] Video: " .. uri)
+                vlc.msg.info("[SFT] No matching .sft file found — filtering OFF for this video")
             end
         end
 
