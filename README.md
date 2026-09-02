@@ -4,20 +4,25 @@ A VLC Media Player extension and background playback engine that allows family-s
 
 ---
 
-## ⚡ Quick 1-Click Installation (macOS & Linux)
+## ⚡ Quick 1-Click Installation
 
-Open Terminal and paste this one command:
-
+### macOS & Linux
+Open Terminal and run:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/bijuneyyan/vlc/main/install.sh | bash
 ```
+*Or download the repository ZIP and double-click **`Install.command`**.*
 
-> **What this does**: Automatically installs the GUI extension, background engine, and configures VLC preferences. No manual settings required!
+---
 
-### Alternative: Download & Double-Click (macOS)
-1. Download the repository ZIP from GitHub and unzip it.
-2. Double-click **`Install.command`** inside the folder.
-   *(If macOS shows an unidentified developer prompt: Right-click `Install.command` → Click **Open** → Click **Open Anyway**).*
+### Windows
+Open PowerShell and run:
+```powershell
+irm https://raw.githubusercontent.com/bijuneyyan/vlc/main/install.ps1 | iex
+```
+*Or download the repository ZIP and double-click **`Install.bat`**.*
+
+> **What the installers do**: Automatically install the GUI extension, background engine, and configure VLC preferences (`vlcrc`). No manual settings required!
 
 ---
 

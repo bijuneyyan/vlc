@@ -246,9 +246,18 @@ local function seek_to(target_sec)
     end
 end
 
+local is_windows = (package.config:sub(1,1) == "\\")
+
 local function is_filtering_enabled()
-    local home = os.getenv("HOME") or "/tmp"
-    local f = io.open(home .. "/Library/Application Support/org.videolan.vlc/lua/extensions/userdata/sft_disabled.flag", "r")
+    local path = ""
+    if is_windows then
+        local appdata = os.getenv("APPDATA") or "C:\\"
+        path = appdata .. "\\vlc\\lua\\extensions\\userdata\\sft_disabled.flag"
+    else
+        local home = os.getenv("HOME") or "/tmp"
+        path = home .. "/Library/Application Support/org.videolan.vlc/lua/extensions/userdata/sft_disabled.flag"
+    end
+    local f = io.open(path, "r")
     if f then
         f:close()
         return false

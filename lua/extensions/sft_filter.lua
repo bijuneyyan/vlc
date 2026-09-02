@@ -355,18 +355,31 @@ end
 -------------------------------------------------------------------------------
 -- Button callbacks
 -------------------------------------------------------------------------------
+local is_windows = (package.config:sub(1,1) == "\\")
+
 local function on_browse()
-    local script = 'try\nset p to POSIX path of (choose file of type {"sft","json"} with prompt "Select .sft file")\nreturn p\non error\nreturn ""\nend try'
-    local cmd = "osascript -e '" .. script:gsub("\n", " ") .. "' 2>/dev/null"
-    local h = io.popen(cmd)
-    if h then
-        local result = h:read("*l")
-        h:close()
-        if result and result ~= "" then
-            result = result:gsub("%s+$", "")
-            if w_sft_path then w_sft_path:set_text(result) end
-            load_sft(result)
+    local result = nil
+    if is_windows then
+        local ps_cmd = 'powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.OpenFileDialog; $f.Filter = \'Safety Filter (*.sft)|*.sft|All files (*.*)|*.*\'; if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $f.FileName }"'
+        local h = io.popen(ps_cmd)
+        if h then
+            result = h:read("*l")
+            h:close()
         end
+    else
+        local script = 'try\nset p to POSIX path of (choose file of type {"sft","json"} with prompt "Select .sft file")\nreturn p\non error\nreturn ""\nend try'
+        local cmd = "osascript -e '" .. script:gsub("\n", " ") .. "' 2>/dev/null"
+        local h = io.popen(cmd)
+        if h then
+            result = h:read("*l")
+            h:close()
+        end
+    end
+
+    if result and result ~= "" then
+        result = result:gsub("%s+$", "")
+        if w_sft_path then w_sft_path:set_text(result) end
+        load_sft(result)
     end
 end
 
@@ -457,9 +470,20 @@ local function on_export()
     if w_sft_path then save_sft(w_sft_path:get_text()) end
 end
 
+local function get_user_data_dir()
+    if is_windows then
+        local appdata = os.getenv("APPDATA") or "C:\\"
+        return appdata .. "\\vlc\\lua\\extensions\\userdata"
+    else
+        local home = os.getenv("HOME") or "/tmp"
+        return home .. "/Library/Application Support/org.videolan.vlc/lua/extensions/userdata"
+    end
+end
+
 local function get_disabled_flag_path()
-    local home = os.getenv("HOME") or "/tmp"
-    return home .. "/Library/Application Support/org.videolan.vlc/lua/extensions/userdata/sft_disabled.flag"
+    local dir = get_user_data_dir()
+    local sep = is_windows and "\\" or "/"
+    return dir .. sep .. "sft_disabled.flag"
 end
 
 local function is_filtering_enabled()
@@ -476,9 +500,12 @@ local function set_filtering_enabled(enabled)
     if enabled then
         os.remove(path)
     else
-        local home = os.getenv("HOME") or "/tmp"
-        local dir = home .. "/Library/Application Support/org.videolan.vlc/lua/extensions/userdata"
-        os.execute('mkdir -p "' .. dir .. '"')
+        local dir = get_user_data_dir()
+        if is_windows then
+            os.execute('if not exist "' .. dir .. '" mkdir "' .. dir .. '"')
+        else
+            os.execute('mkdir -p "' .. dir .. '"')
+        end
         local f = io.open(path, "w")
         if f then
             f:write("disabled")
