@@ -272,19 +272,20 @@ end
 -------------------------------------------------------------------------------
 -- File I/O
 -------------------------------------------------------------------------------
-local function get_share_dir()
-    local home = os.getenv("HOME") or "/tmp"
-    return home .. "/Library/Application Support/org.videolan.vlc/lua/extensions/userdata"
-end
+local function get_video_sft_path()
+    -- Like subtitles: derive the .sft path from the currently playing video
+    local ok, item = pcall(function() return vlc.input.item() end)
+    if not ok or not item then return nil end
+    local ok2, uri = pcall(function() return item:uri() end)
+    if not ok2 or not uri then return nil end
 
-local function write_active_sft_path(path)
-    local share_dir = get_share_dir()
-    os.execute('mkdir -p "' .. share_dir .. '"')
-    local sf = io.open(share_dir .. "/sft_active.txt", "w")
-    if sf then
-        sf:write(path)
-        sf:close()
-    end
+    local filepath = uri:gsub("^file://", "")
+    filepath = filepath:gsub("%%(%x%x)", function(h)
+        return string.char(tonumber(h, 16))
+    end)
+    local base = filepath:match("(.+)%.[^%.]+$")
+    if base then return base .. ".sft" end
+    return nil
 end
 
 local function load_sft(path)
@@ -310,7 +311,6 @@ local function load_sft(path)
     current_sft_path = path
     if w_sft_path then w_sft_path:set_text(path) end
     refresh_filter_list()
-    write_active_sft_path(path)
 
     if w_status then w_status:set_text("Loaded " .. #sft_data.filters .. " filters from " .. path) end
     if dlg then dlg:update() end
@@ -318,6 +318,10 @@ local function load_sft(path)
 end
 
 local function save_sft(path)
+    if not path or path == "" then
+        -- Default: save next to the video (like subtitles)
+        path = get_video_sft_path()
+    end
     if not path or path == "" then
         local home = os.getenv("HOME") or "/tmp"
         path = home .. "/Desktop/movie.sft"
@@ -342,7 +346,6 @@ local function save_sft(path)
 
     current_sft_path = path
     if w_sft_path then w_sft_path:set_text(path) end
-    write_active_sft_path(path)
 
     if w_status then w_status:set_text("Saved " .. #sft_data.filters .. " filters to " .. path) end
     if dlg then dlg:update() end
@@ -478,8 +481,12 @@ function activate()
         return
     end
 
-    local home = os.getenv("HOME") or "/tmp"
-    local default_path = home .. "/Desktop/movie.sft"
+    -- Like subtitles: default .sft path matches the current video filename
+    local default_path = get_video_sft_path()
+    if not default_path then
+        local home = os.getenv("HOME") or "/tmp"
+        default_path = home .. "/Desktop/movie.sft"
+    end
 
     dlg = vlc.dialog("Safety Filter (.sft) Manager")
 
