@@ -1,50 +1,58 @@
 # Safety Filter File (.sft) for VLC Media Player
 
-A VLC Media Player feature and extension that allows family-safe watching by automatically skipping or muting designated sensitive scenes (such as violence, gore, nudity, or profanity) using standard Safety Filter Files (`.sft`).
-
-## Features
-- **Auto-Play Filter**: Load a `.sft` file corresponding to a movie/video to automatically skip or mute sensitive timestamps during playback.
-- **In-Out Marker Editor**: Interactive GUI inside VLC to easily mark `IN` and `OUT` timestamps while watching a movie, assign categories & actions, and generate/export `.sft` files.
-- **Supported Actions**:
-  - `skip`: Instantly skips the designated segment.
-  - `mute`: Mutes the audio for the designated segment and unmutes afterwards.
+A VLC Media Player extension and background playback engine that allows family-safe watching by automatically skipping or muting designated sensitive scenes (such as violence, gore, nudity, or profanity) using standard Safety Filter Files (`.sft`).
 
 ---
 
-## Installation
+## ⚡ Quick 1-Click Installation (macOS & Linux)
 
-To install the `.sft` Safety Filter extension in VLC:
+Open Terminal and paste this one command:
 
-### macOS
-Copy `lua/extensions/sft_filter.lua` to:
-`~/Library/Application Support/org.videolan.vlc/lua/extensions/`
-*(Create the `lua/extensions` directory if it does not exist)*
+```bash
+curl -fsSL https://raw.githubusercontent.com/bijuneyyan/vlc/main/install.sh | bash
+```
 
-### Windows
-Copy `lua/extensions/sft_filter.lua` to:
-`%APPDATA%\vlc\lua\extensions\`
+> **What this does**: Automatically installs the GUI extension, background engine, and configures VLC preferences. No manual settings required!
 
-### Linux
-Copy `lua/extensions/sft_filter.lua` to:
-`~/.local/share/vlc/lua/extensions/`
+### Alternative: Download & Double-Click (macOS)
+1. Download the repository ZIP from GitHub and unzip it.
+2. Double-click **`Install.command`** inside the folder.
+   *(If macOS shows an unidentified developer prompt: Right-click `Install.command` → Click **Open** → Click **Open Anyway**).*
 
 ---
 
-## Usage
+## 🎬 How It Works (Subtitle-Style)
+
+Safety filters work **just like subtitles**:
+
+1. Place `movie.sft` in the same folder as `movie.mp4` (same base name).
+2. Open and play the movie in VLC.
+3. VLC automatically detects and loads the filter file:
+   - **`skip`** segments jump forward past sensitive scenes instantly.
+   - **`mute`** segments silence the audio during harsh language and unmute immediately afterwards.
+4. If you rename or delete `movie.sft`, filtering turns off automatically.
+
+---
+
+## 🛠️ Creating & Editing Filters in VLC
+
+To create your own `.sft` files while watching a movie:
 
 1. Open VLC Media Player.
-2. Go to **View** -> **Safety Filter (.sft)**.
-3. Use the dialog to:
-   - **Load `.sft`**: Load an existing `.sft` file to apply filter rules.
-   - **Mark IN / OUT**: Capture timestamps live during video playback.
-   - **Add Filter Segment**: Save designated segments with `skip` or `mute` action.
-   - **Export .sft**: Generate and save the `.sft` metadata file.
+2. In the top menu, go to **VLC media player** → **Extensions** → **Safety Filter (.sft)**.
+3. Play the video:
+   - Click **Set IN = Current Time** at the start of the scene.
+   - Click **Set OUT = Current Time** at the end of the scene.
+   - Select **Action** (`Skip` or `Mute`) and **Category** (`Gore`, `Violence`, `Nudity`, `Profanity`, etc.).
+   - Click **+ ADD FILTER**.
+4. Click **Export .sft** to save the filter file (defaults to next to the video or Desktop).
+5. Use **Filter Status: `[ Enabled ]` / `[ Disabled ]`** to toggle filtering on or off anytime.
 
 ---
 
-## `.sft` File Format Specification
+## 📄 `.sft` Specification Format
 
-`.sft` files use a lightweight JSON structure:
+`.sft` files use an open, lightweight JSON format:
 
 ```json
 {
@@ -52,7 +60,6 @@ Copy `lua/extensions/sft_filter.lua` to:
   "metadata": {
     "title": "Example Movie",
     "year": 2024,
-    "duration_seconds": 7200,
     "created_by": "VLC User"
   },
   "filters": [
@@ -78,11 +85,10 @@ Copy `lua/extensions/sft_filter.lua` to:
 
 ---
 
-## Repository & Development Setup
+## 🌿 Repository & Branching Workflow
 
-This project uses Git with the following branch workflow:
-- `main`: Stable, release-ready versions.
-- `develop`: Integration branch for active development.
+- `main`: Production-ready release branch.
+- `develop`: Integration & active development branch.
 - `feature/*`: Specific feature branches.
 
 License: MIT
