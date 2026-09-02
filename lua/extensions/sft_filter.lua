@@ -14,7 +14,7 @@ function descriptor()
 end
 
 -------------------------------------------------------------------------------
--- Pure Lua JSON (local functions only -- Lua 5.1 safe, no global function syntax)
+-- Pure Lua JSON (local functions only -- Lua 5.1 safe)
 -------------------------------------------------------------------------------
 local function json_encode(val, indent)
     indent = indent or ""
@@ -31,11 +31,11 @@ local function json_encode(val, indent)
         return string.format("%.4f", val)
     elseif t == "string" then
         local s = val
-        s = s:gsub('\\', '\\\\')
+        s = s:gsub("\\", "\\\\")
         s = s:gsub('"', '\\"')
-        s = s:gsub('\n', '\\n')
-        s = s:gsub('\r', '\\r')
-        s = s:gsub('\t', '\\t')
+        s = s:gsub("\n", "\\n")
+        s = s:gsub("\r", "\\r")
+        s = s:gsub("\t", "\\t")
         return '"' .. s .. '"'
     elseif t == "table" then
         local is_arr = true
@@ -90,14 +90,14 @@ local function json_decode(str)
             if c == '"' then
                 pos = pos + 1
                 return table.concat(buf)
-            elseif c == '\\' then
+            elseif c == "\\" then
                 pos = pos + 1
                 local e = str:sub(pos, pos)
-                if e == 'n' then buf[#buf+1] = '\n'
-                elseif e == 'r' then buf[#buf+1] = '\r'
-                elseif e == 't' then buf[#buf+1] = '\t'
+                if e == "n" then buf[#buf+1] = "\n"
+                elseif e == "r" then buf[#buf+1] = "\r"
+                elseif e == "t" then buf[#buf+1] = "\t"
                 elseif e == '"' then buf[#buf+1] = '"'
-                elseif e == '\\' then buf[#buf+1] = '\\'
+                elseif e == "\\" then buf[#buf+1] = "\\"
                 else buf[#buf+1] = e end
                 pos = pos + 1
             else
@@ -110,26 +110,26 @@ local function json_decode(str)
 
     local function parse_num()
         local start = pos
-        if str:sub(pos, pos) == '-' then pos = pos + 1 end
+        if str:sub(pos, pos) == "-" then pos = pos + 1 end
         while pos <= slen and str:sub(pos,pos):find("[0-9%.eE%+%-]") do
             pos = pos + 1
         end
         return tonumber(str:sub(start, pos - 1))
     end
 
-    local pval  -- forward declare
+    local pval
 
     local function parse_arr()
         pos = pos + 1
         local arr = {}
         skip_ws()
-        if str:sub(pos, pos) == ']' then pos = pos + 1; return arr end
+        if str:sub(pos, pos) == "]" then pos = pos + 1; return arr end
         while pos <= slen do
             arr[#arr+1] = pval()
             skip_ws()
             local c = str:sub(pos, pos)
-            if c == ']' then pos = pos + 1; return arr
-            elseif c == ',' then pos = pos + 1; skip_ws()
+            if c == "]" then pos = pos + 1; return arr
+            elseif c == "," then pos = pos + 1; skip_ws()
             else break end
         end
         return arr
@@ -139,18 +139,18 @@ local function json_decode(str)
         pos = pos + 1
         local obj = {}
         skip_ws()
-        if str:sub(pos, pos) == '}' then pos = pos + 1; return obj end
+        if str:sub(pos, pos) == "}" then pos = pos + 1; return obj end
         while pos <= slen do
             skip_ws()
             if str:sub(pos, pos) ~= '"' then break end
             local key = parse_str()
             skip_ws()
-            if str:sub(pos, pos) == ':' then pos = pos + 1; skip_ws() end
+            if str:sub(pos, pos) == ":" then pos = pos + 1; skip_ws() end
             obj[key] = pval()
             skip_ws()
             local c = str:sub(pos, pos)
-            if c == '}' then pos = pos + 1; return obj
-            elseif c == ',' then pos = pos + 1
+            if c == "}" then pos = pos + 1; return obj
+            elseif c == "," then pos = pos + 1
             else break end
         end
         return obj
@@ -161,12 +161,12 @@ local function json_decode(str)
         if pos > slen then return nil end
         local c = str:sub(pos, pos)
         if c == '"' then return parse_str()
-        elseif c == '[' then return parse_arr()
-        elseif c == '{' then return parse_obj()
-        elseif c == 't' then pos = pos + 4; return true
-        elseif c == 'f' then pos = pos + 5; return false
-        elseif c == 'n' then pos = pos + 4; return nil
-        elseif c == '-' or (c >= '0' and c <= '9') then return parse_num()
+        elseif c == "[" then return parse_arr()
+        elseif c == "{" then return parse_obj()
+        elseif c == "t" then pos = pos + 4; return true
+        elseif c == "f" then pos = pos + 5; return false
+        elseif c == "n" then pos = pos + 4; return nil
+        elseif c == "-" or (c >= "0" and c <= "9") then return parse_num()
         end
         return nil
     end
@@ -186,7 +186,6 @@ local sft_data = {
 }
 
 local current_sft_path = ""
-
 local is_windows = (os.getenv("WINDIR") ~= nil)
 
 local w_sft_path   = nil
@@ -343,9 +342,9 @@ local function set_filtering_enabled(enabled)
     else
         local dir = get_user_data_dir()
         if is_windows then
-            os.execute('if not exist "' .. dir .. '" mkdir "' .. dir .. '"')
+            os.execute("if not exist \"" .. dir .. "\" mkdir \"" .. dir .. "\"")
         else
-            os.execute('mkdir -p "' .. dir .. '"')
+            os.execute("mkdir -p \"" .. dir .. "\"")
         end
         local f = io.open(path, "w")
         if f then f:write("disabled"); f:close() end
@@ -358,12 +357,11 @@ end
 local function on_browse()
     local result = nil
     if is_windows then
-        local cmd = 'powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.OpenFileDialog; $f.Filter = \'Safety Filter (*.sft)|*.sft\'; if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $f.FileName }"'
+        local cmd = [[powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.OpenFileDialog; $f.Filter = 'Safety Filter (*.sft)|*.sft'; if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $f.FileName }"]]
         local h = io.popen(cmd)
         if h then result = h:read("*l"); h:close() end
     else
-        local cmd = "osascript -e 'try' -e 'set p to POSIX path of (choose file with prompt \"Select .sft file\")' -e 'return p' -e 'on error' -e 'return \"\"' -e 'end try' 2>/dev/null"
-        local h = io.popen(cmd)
+        local h = io.popen("osascript -e 'try' -e 'POSIX path of (choose file with prompt \"Select .sft file\")' -e 'on error' -e '\"\"' -e 'end try' 2>/dev/null")
         if h then result = h:read("*l"); h:close() end
     end
     if result and result ~= "" then
@@ -451,7 +449,7 @@ end
 local function on_save_as()
     local sel = nil
     if is_windows then
-        local cmd = 'powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.SaveFileDialog; $f.Filter = \'Safety Filter (*.sft)|*.sft\'; $f.DefaultExt = \'sft\'; if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $f.FileName }"'
+        local cmd = [[powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.SaveFileDialog; $f.Filter = 'Safety Filter (*.sft)|*.sft'; $f.DefaultExt = 'sft'; if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $f.FileName }"]]
         local h = io.popen(cmd)
         if h then sel = h:read("*l"); h:close() end
     else
@@ -460,8 +458,7 @@ local function on_save_as()
             local p = w_sft_path:get_text()
             if p and p ~= "" then dname = p:match("([^/]+)$") or "movie.sft" end
         end
-        local cmd = "osascript -e 'try' -e 'set p to POSIX path of (choose file name default name \"" .. dname .. "\" with prompt \"Save .sft As:\")' -e 'return p' -e 'on error' -e 'return \"\"' -e 'end try' 2>/dev/null"
-        local h = io.popen(cmd)
+        local h = io.popen("osascript -e 'try' -e 'POSIX path of (choose file name default name \"" .. dname .. "\" with prompt \"Save .sft As:\")' -e 'on error' -e '\"\"' -e 'end try' 2>/dev/null")
         if h then sel = h:read("*l"); h:close() end
     end
     if sel and sel ~= "" then
