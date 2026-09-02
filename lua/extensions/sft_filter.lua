@@ -457,6 +457,50 @@ local function on_export()
     if w_sft_path then save_sft(w_sft_path:get_text()) end
 end
 
+local function get_disabled_flag_path()
+    local home = os.getenv("HOME") or "/tmp"
+    return home .. "/Library/Application Support/org.videolan.vlc/lua/extensions/userdata/sft_disabled.flag"
+end
+
+local function is_filtering_enabled()
+    local f = io.open(get_disabled_flag_path(), "r")
+    if f then
+        f:close()
+        return false
+    end
+    return true
+end
+
+local function set_filtering_enabled(enabled)
+    local path = get_disabled_flag_path()
+    if enabled then
+        os.remove(path)
+    else
+        local home = os.getenv("HOME") or "/tmp"
+        local dir = home .. "/Library/Application Support/org.videolan.vlc/lua/extensions/userdata"
+        os.execute('mkdir -p "' .. dir .. '"')
+        local f = io.open(path, "w")
+        if f then
+            f:write("disabled")
+            f:close()
+        end
+    end
+end
+
+local function on_toggle_filtering()
+    local currently_enabled = is_filtering_enabled()
+    local new_state = not currently_enabled
+    set_filtering_enabled(new_state)
+    if w_status then
+        if new_state then
+            w_status:set_text("✅ Safety Filtering: ENABLED (Active)")
+        else
+            w_status:set_text("⏸️ Safety Filtering: DISABLED (Bypassed)")
+        end
+    end
+    if dlg then dlg:update() end
+end
+
 local function on_clear()
     sft_data.filters = {}
     refresh_filter_list()
@@ -537,9 +581,14 @@ function activate()
     dlg:add_button("Clear All", on_clear, 3, row, 1, 1)
     dlg:add_button("Close", close, 4, row, 1, 1)
 
-    -- Row 7: Status
+    -- Row 7: Toggle Filtering ON/OFF Button
     row = row + 1
-    w_status = dlg:add_label("Ready. Play video, pause, click Set IN / Set OUT.", 1, row, 4, 1)
+    dlg:add_button("Toggle Filtering (Enable / Disable)", on_toggle_filtering, 1, row, 4, 1)
+
+    -- Row 8: Status Bar
+    row = row + 1
+    local init_status = is_filtering_enabled() and "Ready. ✅ Safety Filtering: ENABLED" or "Ready. ⏸️ Safety Filtering: DISABLED"
+    w_status = dlg:add_label(init_status, 1, row, 4, 1)
 
     refresh_filter_list()
     dlg:show()

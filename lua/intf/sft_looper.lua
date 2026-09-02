@@ -246,6 +246,16 @@ local function seek_to(target_sec)
     end
 end
 
+local function is_filtering_enabled()
+    local home = os.getenv("HOME") or "/tmp"
+    local f = io.open(home .. "/Library/Application Support/org.videolan.vlc/lua/extensions/userdata/sft_disabled.flag", "r")
+    if f then
+        f:close()
+        return false
+    end
+    return true
+end
+
 local function set_mute(should_mute)
     if should_mute and not muted_by_sft then
         pcall(function() vlc.volume.set(0) end)
@@ -310,8 +320,9 @@ while true do
         end
         tick = tick + 1
 
-        -- 3. Apply filters if any are loaded
-        if #filters > 0 then
+        -- 3. Apply filters if enabled and loaded
+        local enabled = is_filtering_enabled()
+        if enabled and #filters > 0 then
             local now = get_time_seconds()
             if now and now >= 0 then
                 local inside_mute = false
@@ -335,6 +346,8 @@ while true do
 
                 set_mute(inside_mute)
             end
+        elseif not enabled and muted_by_sft then
+            set_mute(false)
         end
 
         -- 4. Sleep 50ms (50,000 μs)
