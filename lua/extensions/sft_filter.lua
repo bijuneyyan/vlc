@@ -18,7 +18,7 @@ function descriptor()
 end
 
 -------------------------------------------------------------------------------
--- Pure Lua JSON Module (Embedded — zero external dependencies)
+-- Pure Lua JSON Module (Embedded - zero external dependencies)
 -------------------------------------------------------------------------------
 local JSON = {}
 
@@ -561,9 +561,9 @@ local function on_toggle_filtering()
     end
     if w_status then
         if new_state then
-            w_status:set_text("✅ Filter Status: Enabled (Active)")
+            w_status:set_text("[ON] Filter Status: Enabled (Active)")
         else
-            w_status:set_text("⏸️ Filter Status: Disabled (Bypassed)")
+            w_status:set_text("[OFF] Filter Status: Disabled (Bypassed)")
         end
     end
     if dlg then dlg:update() end
@@ -606,20 +606,20 @@ function activate()
 
     -- ZONE 1: Header (Position & Master Filter Status)
     local cur_t = get_time_seconds()
-    w_live_time = dlg:add_label("<b>🎬 Position:</b> " .. fmt_time(cur_t), 1, row, 2, 1)
+    w_live_time = dlg:add_label("<b>[>] Position:</b> " .. fmt_time(cur_t), 1, row, 2, 1)
     dlg:add_label("<b>Status:</b>", 3, row, 1, 1)
     local toggle_title = is_filtering_enabled() and "Enabled" or "Disabled"
     w_toggle_btn = dlg:add_button(toggle_title, on_toggle_filtering, 4, row, 1, 1)
 
     -- ZONE 2: Section 1 Header (Mark Filter Segment)
     row = row + 1
-    dlg:add_label("<b>── 1. Mark Filter Segment ───────────────────────</b>", 1, row, 4, 1)
+    dlg:add_label("<b>-- 1. Mark Filter Segment -----------------------</b>", 1, row, 4, 1)
 
     -- Row 3: IN & OUT Time Capture
     row = row + 1
-    dlg:add_button("⏱️ Set IN", on_set_in, 1, row, 1, 1)
+    dlg:add_button("[t] Set IN", on_set_in, 1, row, 1, 1)
     w_in_time = dlg:add_text_input("0.00", 2, row, 1, 1)
-    dlg:add_button("⏱️ Set OUT", on_set_out, 3, row, 1, 1)
+    dlg:add_button("[t] Set OUT", on_set_out, 3, row, 1, 1)
     w_out_time = dlg:add_text_input("0.00", 4, row, 1, 1)
 
     -- Row 4: Action & Category Dropdowns
@@ -640,11 +640,11 @@ function activate()
     row = row + 1
     dlg:add_label("<b>Note:</b>", 1, row, 1, 1)
     w_desc = dlg:add_text_input("", 2, row, 2, 1)
-    dlg:add_button("➕ Add Filter", on_add_filter, 4, row, 1, 1)
+    dlg:add_button("[+] Add Filter", on_add_filter, 4, row, 1, 1)
 
     -- ZONE 3: Section 2 Header (Active Filters)
     row = row + 1
-    dlg:add_label("<b>── 2. Active Filters ───────────────────────────</b>", 1, row, 4, 1)
+    dlg:add_label("<b>-- 2. Active Filters ---------------------------</b>", 1, row, 4, 1)
 
     -- Row 7: Filter List (Scrollable List Widget)
     row = row + 1
@@ -652,23 +652,23 @@ function activate()
 
     -- Row 8: Filter List Actions
     row = row + 1
-    dlg:add_button("🗑️ Remove Selected", on_remove_selected, 1, row, 2, 1)
-    dlg:add_button("🧹 Clear All", on_clear, 3, row, 2, 1)
+    dlg:add_button("[-] Remove Selected", on_remove_selected, 1, row, 2, 1)
+    dlg:add_button("[x] Clear All", on_clear, 3, row, 2, 1)
 
     -- ZONE 4: Section 3 Header (File Storage)
     row = row + 1
-    dlg:add_label("<b>── 3. File Storage (.sft) ──────────────────────</b>", 1, row, 4, 1)
+    dlg:add_label("<b>-- 3. File Storage (.sft) ----------------------</b>", 1, row, 4, 1)
 
     -- Row 10: File Path & Browse/Load
     row = row + 1
     w_sft_path = dlg:add_text_input(default_path, 1, row, 2, 1)
-    dlg:add_button("📂 Browse", on_browse, 3, row, 1, 1)
-    dlg:add_button("📥 Load", on_load, 4, row, 1, 1)
+    dlg:add_button("[..] Browse", on_browse, 3, row, 1, 1)
+    dlg:add_button("[v] Load", on_load, 4, row, 1, 1)
 
     -- Row 11: Save & Save As Buttons
     row = row + 1
-    dlg:add_button("💾 Save .sft", on_save, 1, row, 2, 1)
-    dlg:add_button("📁 Save As...", on_save_as, 3, row, 2, 1)
+    dlg:add_button("[S] Save .sft", on_save, 1, row, 2, 1)
+    dlg:add_button("[A] Save As...", on_save_as, 3, row, 2, 1)
 
     -- Row 12: Status Bar
     row = row + 1
