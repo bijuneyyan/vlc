@@ -466,8 +466,44 @@ local function on_remove_selected()
     if dlg then dlg:update() end
 end
 
-local function on_export()
-    if w_sft_path then save_sft(w_sft_path:get_text()) end
+local function on_save()
+    if w_sft_path then
+        save_sft(w_sft_path:get_text())
+    end
+end
+
+local function on_save_as()
+    local selected_path = nil
+    if is_windows then
+        local ps_cmd = 'powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.SaveFileDialog; $f.Filter = \'Safety Filter (*.sft)|*.sft|All files (*.*)|*.*\'; $f.DefaultExt = \'sft\'; if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $f.FileName }"'
+        local h = io.popen(ps_cmd)
+        if h then
+            selected_path = h:read("*l")
+            h:close()
+        end
+    else
+        local default_name = "movie.sft"
+        if w_sft_path and w_sft_path:get_text() ~= "" then
+            local p = w_sft_path:get_text()
+            default_name = p:match("([^/]+)$") or "movie.sft"
+        end
+        local script = 'try\nset p to POSIX path of (choose file name with prompt "Save Safety Filter (.sft) As:" default name "' .. default_name .. '")\nreturn p\non error\nreturn ""\nend try'
+        local cmd = "osascript -e '" .. script:gsub("\n", " ") .. "' 2>/dev/null"
+        local h = io.popen(cmd)
+        if h then
+            selected_path = h:read("*l")
+            h:close()
+        end
+    end
+
+    if selected_path and selected_path ~= "" then
+        selected_path = selected_path:gsub("%s+$", "")
+        if selected_path:sub(-4) ~= ".sft" then
+            selected_path = selected_path .. ".sft"
+        end
+        if w_sft_path then w_sft_path:set_text(selected_path) end
+        save_sft(selected_path)
+    end
 end
 
 local function get_user_data_dir()
@@ -566,23 +602,27 @@ function activate()
 
     dlg = vlc.dialog("Safety Filter (.sft) Manager")
 
-    -- Strict 4-column grid. Every widget uses col_span=1 and row_span=1.
     local row = 1
 
-    -- Row 1: .sft File Path
-    dlg:add_label("<b>.sft File:</b>", 1, row, 1, 1)
-    w_sft_path = dlg:add_text_input(default_path, 2, row, 1, 1)
-    dlg:add_button("Browse", on_browse, 3, row, 1, 1)
-    dlg:add_button("Load", on_load, 4, row, 1, 1)
+    -- ZONE 1: Header (Position & Master Filter Status)
+    local cur_t = get_time_seconds()
+    w_live_time = dlg:add_label("<b>🎬 Position:</b> " .. fmt_time(cur_t), 1, row, 2, 1)
+    dlg:add_label("<b>Status:</b>", 3, row, 1, 1)
+    local toggle_title = is_filtering_enabled() and "Enabled" or "Disabled"
+    w_toggle_btn = dlg:add_button(toggle_title, on_toggle_filtering, 4, row, 1, 1)
 
-    -- Row 2: IN / OUT time capture
+    -- ZONE 2: Section 1 Header (Mark Filter Segment)
     row = row + 1
-    dlg:add_button("Set IN", on_set_in, 1, row, 1, 1)
+    dlg:add_label("<b>── 1. Mark Filter Segment ───────────────────────</b>", 1, row, 4, 1)
+
+    -- Row 3: IN & OUT Time Capture
+    row = row + 1
+    dlg:add_button("⏱️ Set IN", on_set_in, 1, row, 1, 1)
     w_in_time = dlg:add_text_input("0.00", 2, row, 1, 1)
-    dlg:add_button("Set OUT", on_set_out, 3, row, 1, 1)
+    dlg:add_button("⏱️ Set OUT", on_set_out, 3, row, 1, 1)
     w_out_time = dlg:add_text_input("0.00", 4, row, 1, 1)
 
-    -- Row 3: Action + Category
+    -- Row 4: Action & Category Dropdowns
     row = row + 1
     dlg:add_label("<b>Action:</b>", 1, row, 1, 1)
     w_action = dlg:add_dropdown(2, row, 1, 1)
@@ -596,30 +636,41 @@ function activate()
     w_category:add_value("Profanity", 4)
     w_category:add_value("Other", 5)
 
-    -- Row 4: Description + Add button
+    -- Row 5: Description & + Add Filter Button
     row = row + 1
-    dlg:add_label("<b>Desc:</b>", 1, row, 1, 1)
-    w_desc = dlg:add_text_input("", 2, row, 1, 1)
-    dlg:add_button("+ ADD FILTER", on_add_filter, 3, row, 2, 1)
+    dlg:add_label("<b>Note:</b>", 1, row, 1, 1)
+    w_desc = dlg:add_text_input("", 2, row, 2, 1)
+    dlg:add_button("➕ Add Filter", on_add_filter, 4, row, 1, 1)
 
-    -- Row 5: Filter list (add_list — the proper scrollable list widget)
+    -- ZONE 3: Section 2 Header (Active Filters)
+    row = row + 1
+    dlg:add_label("<b>── 2. Active Filters ───────────────────────────</b>", 1, row, 4, 1)
+
+    -- Row 7: Filter List (Scrollable List Widget)
     row = row + 1
     w_list = dlg:add_list(1, row, 4, 1)
 
-    -- Row 6: Control buttons
+    -- Row 8: Filter List Actions
     row = row + 1
-    dlg:add_button("Export .sft", on_export, 1, row, 1, 1)
-    dlg:add_button("Remove Sel.", on_remove_selected, 2, row, 1, 1)
-    dlg:add_button("Clear All", on_clear, 3, row, 1, 1)
-    dlg:add_button("Close", close, 4, row, 1, 1)
+    dlg:add_button("🗑️ Remove Selected", on_remove_selected, 1, row, 2, 1)
+    dlg:add_button("🧹 Clear All", on_clear, 3, row, 2, 1)
 
-    -- Row 7: Filter Status Label & Toggle Button
+    -- ZONE 4: Section 3 Header (File Storage)
     row = row + 1
-    dlg:add_label("<b>Filter Status:</b>", 1, row, 1, 1)
-    local toggle_title = is_filtering_enabled() and "Enabled" or "Disabled"
-    w_toggle_btn = dlg:add_button(toggle_title, on_toggle_filtering, 2, row, 3, 1)
+    dlg:add_label("<b>── 3. File Storage (.sft) ──────────────────────</b>", 1, row, 4, 1)
 
-    -- Row 8: Status Bar
+    -- Row 10: File Path & Browse/Load
+    row = row + 1
+    w_sft_path = dlg:add_text_input(default_path, 1, row, 2, 1)
+    dlg:add_button("📂 Browse", on_browse, 3, row, 1, 1)
+    dlg:add_button("📥 Load", on_load, 4, row, 1, 1)
+
+    -- Row 11: Save & Save As Buttons
+    row = row + 1
+    dlg:add_button("💾 Save .sft", on_save, 1, row, 2, 1)
+    dlg:add_button("📁 Save As...", on_save_as, 3, row, 2, 1)
+
+    -- Row 12: Status Bar
     row = row + 1
     local init_status = is_filtering_enabled() and "Ready. Filter Status: Enabled" or "Ready. Filter Status: Disabled"
     w_status = dlg:add_label(init_status, 1, row, 4, 1)
