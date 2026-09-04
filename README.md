@@ -96,4 +96,11 @@ To create your own `.sft` files while watching a movie:
 - `develop`: Integration & active development branch.
 - `feature/*`: Specific feature branches.
 
-License: MIT
+---
+
+## 📜 License
+
+This project is open source and available under the [MIT License](LICENSE).
+
+Copyright (c) 2026 Biju Neyyan.
+

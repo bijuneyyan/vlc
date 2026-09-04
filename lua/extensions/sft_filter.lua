@@ -5,8 +5,8 @@ function descriptor()
     return {
         title       = "Safety Filter (.sft)",
         version     = "2.0",
-        author      = "VLC SFT Team",
-        url         = "https://github.com/user/vlc-sft",
+        author      = "Biju Neyyan",
+        url         = "https://github.com/bijuneyyan/vlc",
         shortdesc   = "Safety Filter (.sft) Editor",
         description = "Mark in/out points on video to create .sft filter files.",
         capabilities = {"menu"}
